@@ -61,8 +61,8 @@ static void CheckContextSwitch() {
       : "r13", "r15");
 
   ContextSwitch(&context_b, &context_a);
-  ASSERT(context_b.r12 = context_b.r13);
-  ASSERT(context_b.r14 = context_b.r15);
+  ASSERT(context_b.r12 == context_b.r13);
+  ASSERT(context_b.r14 == context_b.r15);
 }
 
 int main() {

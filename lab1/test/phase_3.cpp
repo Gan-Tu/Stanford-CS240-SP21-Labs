@@ -43,7 +43,7 @@ void WorkerWithArithmetic(void*) {
 
 static void CheckStackAlignment() {
   chloros::Spawn(WorkerWithArgument, nullptr);
-  ASSERT(counter = 6);
+  ASSERT(counter == 6);
 }
 
 constexpr int const kLoopTimes = 100;
