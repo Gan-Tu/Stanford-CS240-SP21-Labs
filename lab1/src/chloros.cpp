@@ -54,7 +54,6 @@ std::atomic<uint64_t> Thread::next_id;
 Thread::Thread(bool create_stack)
     : id{next_id++}, state{State::kWaiting}, context{}, stack{nullptr} {
   // FIXME: Phase 1
-
   if (create_stack) {
     stack = (uint8_t*) aligned_alloc(16, chloros::kStackSize);
   }
