@@ -42,7 +42,7 @@ void WorkerWithArithmetic(void*) {
 }
 
 static void CheckStackAlignment() {
-  chloros::Spawn(WorkerWithArgument, nullptr);
+  chloros::Spawn(WorkerWithArithmetic, nullptr);
   ASSERT(counter == 6);
 }
 
