@@ -52,9 +52,13 @@ thread_local uint64_t initial_thread_id;
 std::atomic<uint64_t> Thread::next_id;
 
 Thread::Thread(bool create_stack)
-    : id{0}, state{State::kWaiting}, context{}, stack{nullptr} {
+    : id{next_id++}, state{State::kWaiting}, context{}, stack{nullptr} {
   // FIXME: Phase 1
-  static_cast<void>(create_stack);
+
+  if (create_stack) {
+    stack = (uint8_t*) aligned_alloc(16, chloros::kStackSize);
+  }
+
   // These two initial values are provided for you.
   context.mxcsr = 0x1F80;
   context.x87 = 0x037F;
@@ -62,6 +66,9 @@ Thread::Thread(bool create_stack)
 
 Thread::~Thread() {
   // FIXME: Phase 1
+  if (stack != nullptr) {
+    free(stack);
+  }
 }
 
 void Thread::PrintDebug() {
