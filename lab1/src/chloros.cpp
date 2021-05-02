@@ -209,13 +209,9 @@ bool Yield(bool only_ready) {
   current_thread = std::move(next_thread);
 
   // Context Switch
-  fprintf(stderr, "\n context switch \n");
   queue_lock.unlock();
   ContextSwitch(prev_context, &(current_thread->context));
   GarbageCollect();
-
-  // queue_lock.unlock();
-  fprintf(stderr, "\n post context switch \n");
 
   return true;
 }
@@ -260,11 +256,9 @@ std::pair<int, int> GetThreadCount() {
 }
 
 void ThreadEntry(Function fn, void* arg) {
-  // queue_lock.unlock();
-  fprintf(stderr, "\n unlocked \n");
   fn(arg);
   current_thread->state = Thread::State::kZombie;
-  //LOG_DEBUG("Thread %" PRId64 " exiting.", current_thread->id);
+  // LOG_DEBUG("Thread %" PRId64 " exiting.", current_thread->id);
   // A thread that is spawn will always die yielding control to other threads.
   chloros::Yield();
   // Unreachable here. Why?
