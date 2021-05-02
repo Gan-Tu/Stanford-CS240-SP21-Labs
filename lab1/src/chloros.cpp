@@ -1,4 +1,5 @@
 #include "chloros.h"
+#include "common.h"
 #include <atomic>
 #include <cinttypes>
 #include <cstdio>
@@ -8,18 +9,17 @@
 #include <mutex>
 #include <queue>
 #include <vector>
-#include "common.h"
 
 extern "C" {
 
 // Assembly code to switch context from `old_context` to `new_context`.
-void ContextSwitch(chloros::Context* old_context,
-                   chloros::Context* new_context) __asm__("context_switch");
+void ContextSwitch(chloros::Context *old_context,
+                   chloros::Context *new_context) __asm__("context_switch");
 
 // Assembly entry point for a thread that is spawn. It will fetch arguments on
 // the stack and put them in the right registers. Then it will call
 // `ThreadEntry` for further setup.
-void StartThread(void* arg) __asm__("start_thread");
+void StartThread(void *arg) __asm__("start_thread");
 }
 
 namespace chloros {
@@ -47,7 +47,7 @@ thread_local std::unique_ptr<Thread> current_thread{nullptr};
 // `initial_thread_id`.
 thread_local uint64_t initial_thread_id;
 
-}  // anonymous namespace
+} // anonymous namespace
 
 std::atomic<uint64_t> Thread::next_id;
 
@@ -59,7 +59,8 @@ Thread::Thread(bool create_stack)
     // since the stack grows from higher address to lower address, we will
     // need to re-point the stack pointer to the end of the allocated memory
     // address, aka. the top of the stack
-    stack = (uint8_t*) aligned_alloc(16, chloros::kStackSize) + chloros::kStackSize;
+    stack =
+        (uint8_t *)aligned_alloc(16, chloros::kStackSize) + chloros::kStackSize;
   }
 
   // These two initial values are provided for you.
@@ -77,20 +78,20 @@ Thread::~Thread() {
 void Thread::PrintDebug() {
   fprintf(stderr, "Thread %" PRId64 ": ", id);
   switch (state) {
-    case State::kWaiting:
-      fprintf(stderr, "waiting");
-      break;
-    case State::kReady:
-      fprintf(stderr, "ready");
-      break;
-    case State::kRunning:
-      fprintf(stderr, "running");
-      break;
-    case State::kZombie:
-      fprintf(stderr, "zombie");
-      break;
-    default:
-      break;
+  case State::kWaiting:
+    fprintf(stderr, "waiting");
+    break;
+  case State::kReady:
+    fprintf(stderr, "ready");
+    break;
+  case State::kRunning:
+    fprintf(stderr, "running");
+    break;
+  case State::kZombie:
+    fprintf(stderr, "zombie");
+    break;
+  default:
+    break;
   }
   fprintf(stderr, "\n\tStack: %p\n", stack);
   fprintf(stderr, "\tRSP: 0x%" PRIx64 "\n", context.rsp);
@@ -111,15 +112,15 @@ void Initialize() {
   current_thread = std::move(new_thread);
 }
 
-void Spawn(Function fn, void* arg) {
+void Spawn(Function fn, void *arg) {
   auto new_thread = std::make_unique<Thread>(true);
 
   // FIXME: Phase 3
   // Set up the initial stack, and put it in `thread_queue`. Must yield to it
   // afterwards. How do we make sure it's executed right away?
 
-  size_t offset = sizeof(void**);
-  uint64_t current_rsp  = (uint64_t) new_thread->stack;
+  size_t offset = sizeof(void **);
+  uint64_t current_rsp = (uint64_t)new_thread->stack;
   // Since current_rsp is at the top of the stack, we need to move stack
   // pointer downwards, and lay the arguments and functions in a top-down
   // manner for the stack layout.
@@ -140,13 +141,13 @@ void Spawn(Function fn, void* arg) {
   // move the stack pointer down one word, before we write stuff each time.
   // current_rsp += offset;
   current_rsp -= offset;
-  *(void**)current_rsp = (void*)arg;
+  *(void **)current_rsp = (void *)arg;
 
   current_rsp -= offset;
-  *(void**)current_rsp = (void*)fn;
+  *(void **)current_rsp = (void *)fn;
 
   current_rsp -= offset;
-  *(void**)current_rsp = (void*)StartThread;
+  *(void **)current_rsp = (void *)StartThread;
 
   new_thread->context.rsp = current_rsp;
   new_thread->state = Thread::State::kReady;
@@ -195,7 +196,7 @@ bool Yield(bool only_ready) {
   next_thread->state = Thread::State::kRunning;
 
   // Keep context reference for later
-  Context* prev_context = &prev_thread->context;
+  Context *prev_context = &prev_thread->context;
 
   // Update thread queue
   thread_queue.push_back(std::move(prev_thread));
@@ -223,7 +224,7 @@ void GarbageCollect() {
   // We do not erase in place because it is a bad idea
   // to modify the vector using iterator, while u iterate
   std::vector<std::unique_ptr<Thread>> new_thread_queue{};
-  for (auto&& thread : thread_queue) {
+  for (auto &&thread : thread_queue) {
     if (thread->state != Thread::State::kZombie) {
       new_thread_queue.push_back(std::move(thread));
     }
@@ -238,7 +239,7 @@ std::pair<int, int> GetThreadCount() {
   int ready = 0;
   int zombie = 0;
   std::lock_guard<std::mutex> lock{queue_lock};
-  for (auto&& i : thread_queue) {
+  for (auto &&i : thread_queue) {
     if (i->state == Thread::State::kZombie) {
       ++zombie;
     } else {
@@ -248,7 +249,7 @@ std::pair<int, int> GetThreadCount() {
   return {ready, zombie};
 }
 
-void ThreadEntry(Function fn, void* arg) {
+void ThreadEntry(Function fn, void *arg) {
   fn(arg);
   current_thread->state = Thread::State::kZombie;
   // LOG_DEBUG("Thread %" PRId64 " exiting.", current_thread->id);
@@ -258,4 +259,4 @@ void ThreadEntry(Function fn, void* arg) {
   ASSERT(false);
 }
 
-}  // namespace chloros
+} // namespace chloros

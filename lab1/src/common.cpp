@@ -1,12 +1,12 @@
 #include "common.h"
-#include <sys/time.h>
-#include <sys/types.h>
-#include <unistd.h>
 #include <cstddef>
 #include <cstdio>
 #include <ctime>
 #include <memory>
 #include <mutex>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 namespace chloros {
 
@@ -17,39 +17,39 @@ namespace {
 const bool use_color = isatty(fileno(stderr));
 thread_local const int pid = getpid();
 
-}  // anonymous namespace
+} // anonymous namespace
 
-char const* LogLevelSymbol(LogLevel l) {
+char const *LogLevelSymbol(LogLevel l) {
   switch (l) {
-    case LogLevel::kInfo:
-      return "I";
-    case LogLevel::kWarn:
-      return "W";
-    case LogLevel::kDebug:
-      return "D";
-    case LogLevel::kFatal:
-      return "F";
+  case LogLevel::kInfo:
+    return "I";
+  case LogLevel::kWarn:
+    return "W";
+  case LogLevel::kDebug:
+    return "D";
+  case LogLevel::kFatal:
+    return "F";
   }
   return "";
 }
 
-char const* LogLevelColorMaybe(LogLevel l) {
+char const *LogLevelColorMaybe(LogLevel l) {
   if (use_color) {
     switch (l) {
-      case LogLevel::kInfo:
-        return "\x1b[32m";
-      case LogLevel::kWarn:
-        return "\x1b[31m";
-      case LogLevel::kDebug:
-        return "\x1b[34m";
-      case LogLevel::kFatal:
-        return "\x1b[31m";
+    case LogLevel::kInfo:
+      return "\x1b[32m";
+    case LogLevel::kWarn:
+      return "\x1b[31m";
+    case LogLevel::kDebug:
+      return "\x1b[34m";
+    case LogLevel::kFatal:
+      return "\x1b[31m";
     }
   }
   return "";
 }
 
-char const* LogLevelClearMaybe() {
+char const *LogLevelClearMaybe() {
   if (use_color) {
     return "\x1b[0m";
   } else {
@@ -57,10 +57,10 @@ char const* LogLevelClearMaybe() {
   }
 }
 
-void Log(LogLevel level, char const* file, int line, char const* func,
-         char const* fmt, ...) {
+void Log(LogLevel level, char const *file, int line, char const *func,
+         char const *fmt, ...) {
   static std::mutex m;
-  char const* format_string = "%s%s%s.%06d %d %s:%d: %s]%s ";
+  char const *format_string = "%s%s%s.%06d %d %s:%d: %s]%s ";
   std::time_t time_now;
   std::time(&time_now);
   char time_str[64];
@@ -84,8 +84,8 @@ void Log(LogLevel level, char const* file, int line, char const* func,
   }
 }
 
-void AssertFail(char const* file, int line, char const* func, char const* expr,
-                char const* fmt, ...) {
+void AssertFail(char const *file, int line, char const *func, char const *expr,
+                char const *fmt, ...) {
   std::string msg = FormatString("Assertion `%s' failed at %s:%d: %s", expr,
                                  file, line, func);
   if (fmt) {
@@ -98,20 +98,20 @@ void AssertFail(char const* file, int line, char const* func, char const* expr,
   throw AssertionError{msg};
 }
 
-std::string FormatString(char const* fmt, ...) {
+std::string FormatString(char const *fmt, ...) {
   std::va_list ap;
   va_start(ap, fmt);
-  auto&& rst = FormatStringVariadic(fmt, ap);
+  auto &&rst = FormatStringVariadic(fmt, ap);
   va_end(ap);
   return rst;
 }
 
-std::string FormatStringVariadic(char const* fmt, std::va_list ap_orig) {
+std::string FormatStringVariadic(char const *fmt, std::va_list ap_orig) {
   constexpr std::size_t stack_size = 128;
   auto size = stack_size;
   char stack_ptr[stack_size];
   std::unique_ptr<char[]> heap_ptr{};
-  char* ptr = stack_ptr;
+  char *ptr = stack_ptr;
 
   while (true) {
     std::va_list ap;
@@ -130,6 +130,6 @@ std::string FormatStringVariadic(char const* fmt, std::va_list ap_orig) {
   }
 }
 
-}  // namespace common
+} // namespace common
 
-}  // namespace chloros
+} // namespace chloros
