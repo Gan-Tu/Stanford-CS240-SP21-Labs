@@ -1,6 +1,0 @@
-
-To reproduce the thread sanitizer warning, run
-
-```
-g++ test/phase_extra_credit.cpp -o phase_extra_credit -g -Wall -Wextra -std=c++14 -Iinclude -DDEBUG -Llib -lchloros -pthread -fsanitize=thread
-```
