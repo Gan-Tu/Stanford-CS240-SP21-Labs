@@ -109,11 +109,13 @@ void Initialize() {
   auto new_thread = std::make_unique<Thread>(false);
   new_thread->state = Thread::State::kWaiting;
   initial_thread_id = new_thread->id;
+  new_thread->initial_kernel_thread_id = initial_thread_id;
   current_thread = std::move(new_thread);
 }
 
 void Spawn(Function fn, void *arg) {
   auto new_thread = std::make_unique<Thread>(true);
+  new_thread->initial_kernel_thread_id = initial_thread_id;
 
   // FIXME: Phase 3
   // Set up the initial stack, and put it in `thread_queue`. Must yield to it
@@ -159,7 +161,7 @@ void Spawn(Function fn, void *arg) {
   thread_queue.insert(thread_queue.begin(), std::move(new_thread));
   queue_lock.unlock();
 
-  Yield();
+  Yield(true);
 }
 
 bool Yield(bool only_ready) {
@@ -168,7 +170,6 @@ bool Yield(bool only_ready) {
   // in `kReady` state. Otherwise, also consider `kWaiting` threads. Be careful,
   // never schedule initial thread onto other kernel threads (for extra credit
   // phase)!
-
   queue_lock.lock();
 
   // Find a potential thread to schedule
@@ -176,7 +177,14 @@ bool Yield(bool only_ready) {
   while (it != thread_queue.end()) {
     if ((*it)->state == Thread::State::kReady ||
         ((*it)->state == Thread::State::kWaiting && !only_ready)) {
-      break;
+      if (current_thread->id != initial_thread_id) {
+        break;
+      } else if ((*it)->initial_kernel_thread_id == initial_thread_id) {
+        // If this is the initial kernel thread, we never switch to another
+        // kernel thread. If no other threads are able to run next in this
+        // kernel thread, we will run the initial kernel thread instead.
+        break;
+      }
     }
     it++;
   }
@@ -207,6 +215,7 @@ bool Yield(bool only_ready) {
   // Context Switch
   queue_lock.unlock();
   ContextSwitch(prev_context, &(current_thread->context));
+
   GarbageCollect();
 
   return true;

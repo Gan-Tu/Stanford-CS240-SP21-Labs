@@ -49,6 +49,9 @@ struct Thread {
   Context context;
   uint8_t* stack;
 
+  // The ID of the initial thread scheduled on this kernel thread
+  uint64_t initial_kernel_thread_id;
+
   // Constructor. `create_stack` specifies whether we want to create a stack
   // associated with this thread.
   Thread(bool create_stack);
