@@ -156,8 +156,6 @@ void Spawn(Function fn, void* arg) {
   thread_queue.insert(thread_queue.begin(), std::move(new_thread));
   queue_lock.unlock();
 
-  fprintf(stderr, "\n call Yield from spawn \n");
-
   Yield();
 }
 
@@ -168,10 +166,7 @@ bool Yield(bool only_ready) {
   // never schedule initial thread onto other kernel threads (for extra credit
   // phase)!
 
-  fprintf(stderr, "\n try getting lock \n");
   queue_lock.lock();
-
-  fprintf(stderr, "\n loop thread queue in yield \n");
 
   // Find a potential thread to schedule
   std::vector<std::unique_ptr<Thread>>::iterator it = thread_queue.begin();
@@ -186,8 +181,6 @@ bool Yield(bool only_ready) {
   // Return false, if we cannot yield
   if (it == thread_queue.end()) {
     queue_lock.unlock();
-    fprintf(stderr, "\n unlocked \n");
-    fprintf(stderr, "\n nothing to yield \n");
     return false;
   }
 
