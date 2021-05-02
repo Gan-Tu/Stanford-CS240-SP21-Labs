@@ -139,8 +139,10 @@ void Spawn(Function fn, void *arg) {
   //
   // Note that, the assignment writes to the memory upwards, so we need to
   // move the stack pointer down one word, before we write stuff each time.
-  // current_rsp += offset;
-  current_rsp -= offset;
+
+  // x64 ABI mandates the stack pointer to be 16-byte aligned, and since
+  // we have three things to push, we will have an empty offset at start
+  current_rsp -= 2*offset;
   *(void **)current_rsp = (void *)arg;
 
   current_rsp -= offset;
@@ -252,7 +254,7 @@ std::pair<int, int> GetThreadCount() {
 void ThreadEntry(Function fn, void *arg) {
   fn(arg);
   current_thread->state = Thread::State::kZombie;
-  // LOG_DEBUG("Thread %" PRId64 " exiting.", current_thread->id);
+  LOG_DEBUG("Thread %" PRId64 " exiting.", current_thread->id);
   // A thread that is spawn will always die yielding control to other threads.
   chloros::Yield();
   // Unreachable here. Why?
