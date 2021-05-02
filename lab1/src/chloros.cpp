@@ -55,7 +55,11 @@ Thread::Thread(bool create_stack)
     : id{next_id++}, state{State::kWaiting}, context{}, stack{nullptr} {
   // FIXME: Phase 1
   if (create_stack) {
-    stack = (uint8_t*) aligned_alloc(16, chloros::kStackSize);
+    // aligned_alloc gives the beginning of the allocated memory address
+    // since the stack grows from higher address to lower address, we will
+    // need to re-point the stack pointer to the end of the allocated memory
+    // address, aka. the top of the stack
+    stack = (uint8_t*) aligned_alloc(16, chloros::kStackSize) + chloros::kStackSize;
   }
 
   // These two initial values are provided for you.
@@ -66,7 +70,7 @@ Thread::Thread(bool create_stack)
 Thread::~Thread() {
   // FIXME: Phase 1
   if (stack != nullptr) {
-    free(stack);
+    free(stack - chloros::kStackSize);
   }
 }
 
@@ -109,11 +113,52 @@ void Initialize() {
 
 void Spawn(Function fn, void* arg) {
   auto new_thread = std::make_unique<Thread>(true);
+
   // FIXME: Phase 3
   // Set up the initial stack, and put it in `thread_queue`. Must yield to it
   // afterwards. How do we make sure it's executed right away?
-  static_cast<void>(fn);
-  static_cast<void>(arg);
+
+  size_t offset = sizeof(void**);
+  uint64_t current_rsp  = (uint64_t) new_thread->stack;
+  // Since current_rsp is at the top of the stack, we need to move stack
+  // pointer downwards, and lay the arguments and functions in a top-down
+  // manner for the stack layout.
+  //
+  //      ------------- new_thread->stack (top of stack)
+  //          args
+  //      ------------- |
+  //           fn        |
+  //      ------------- |
+  //       StartThread  v
+  //      ------------- rsp ends here
+  //
+  //          ....
+  //       rest of stack
+  //
+  //
+  // Note that, the assignment writes to the memory upwards, so we need to
+  // move the stack pointer down one word, before we write stuff each time.
+  // current_rsp += offset;
+  current_rsp -= offset;
+  *(void**)current_rsp = (void*)arg;
+
+  current_rsp -= offset;
+  *(void**)current_rsp = (void*)fn;
+
+  current_rsp -= offset;
+  *(void**)current_rsp = (void*)StartThread;
+
+  new_thread->context.rsp = current_rsp;
+  new_thread->state = Thread::State::kReady;
+
+  // Push spawned thread to the front, so it can be scheduled next
+  queue_lock.lock();
+  thread_queue.insert(thread_queue.begin(), std::move(new_thread));
+  queue_lock.unlock();
+
+  fprintf(stderr, "\n call Yield from spawn \n");
+
+  Yield();
 }
 
 bool Yield(bool only_ready) {
@@ -122,7 +167,55 @@ bool Yield(bool only_ready) {
   // in `kReady` state. Otherwise, also consider `kWaiting` threads. Be careful,
   // never schedule initial thread onto other kernel threads (for extra credit
   // phase)!
-  static_cast<void>(only_ready);
+
+  fprintf(stderr, "\n try getting lock \n");
+  queue_lock.lock();
+
+  fprintf(stderr, "\n loop thread queue in yield \n");
+
+  // Find a potential thread to schedule
+  std::vector<std::unique_ptr<Thread>>::iterator it = thread_queue.begin();
+  while (it != thread_queue.end()) {
+    if ((*it)->state == Thread::State::kReady ||
+        ((*it)->state == Thread::State::kWaiting && !only_ready)) {
+      break;
+    }
+    it++;
+  }
+
+  // Return false, if we cannot yield
+  if (it == thread_queue.end()) {
+    queue_lock.unlock();
+    fprintf(stderr, "\n unlocked \n");
+    fprintf(stderr, "\n nothing to yield \n");
+    return false;
+  }
+
+  std::unique_ptr<Thread> prev_thread = std::move(current_thread);
+  std::unique_ptr<Thread> next_thread = std::move(*it);
+  thread_queue.erase(it);
+
+  // Update thread states
+  if (prev_thread->state == Thread::State::kRunning) {
+    prev_thread->state = Thread::State::kReady;
+  }
+  next_thread->state = Thread::State::kRunning;
+
+  // Keep context reference for later
+  Context* prev_context = &prev_thread->context;
+
+  // Update thread queue
+  thread_queue.push_back(std::move(prev_thread));
+  current_thread = std::move(next_thread);
+
+  // Context Switch
+  fprintf(stderr, "\n context switch \n");
+  queue_lock.unlock();
+  ContextSwitch(prev_context, &(current_thread->context));
+
+  // queue_lock.unlock();
+  fprintf(stderr, "\n post context switch \n");
+
   return true;
 }
 
@@ -153,9 +246,11 @@ std::pair<int, int> GetThreadCount() {
 }
 
 void ThreadEntry(Function fn, void* arg) {
+  // queue_lock.unlock();
+  fprintf(stderr, "\n unlocked \n");
   fn(arg);
   current_thread->state = Thread::State::kZombie;
-  LOG_DEBUG("Thread %" PRId64 " exiting.", current_thread->id);
+  //LOG_DEBUG("Thread %" PRId64 " exiting.", current_thread->id);
   // A thread that is spawn will always die yielding control to other threads.
   chloros::Yield();
   // Unreachable here. Why?

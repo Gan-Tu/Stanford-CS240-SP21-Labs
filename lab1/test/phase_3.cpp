@@ -13,21 +13,32 @@ std::atomic<int> counter{0};
 
 void Worker(void*) {
   ++counter;
+  fprintf(stderr, "\n yield with false  from worker \n");
   ASSERT(chloros::Yield(false) == true);
+  fprintf(stderr, "\n resume from yield in worker \n");
   ++counter;
+  fprintf(stderr, "\n yield with true from worker \n");
   ASSERT(chloros::Yield(true) == false);
+  fprintf(stderr, "\n yield with false last time from worker \n");
   chloros::Yield();
+  fprintf(stderr, "\n done \n");
 }
 
 void WorkerWithArgument(void* arg) { counter = *reinterpret_cast<int*>(&arg); }
 
 static void CheckYield() {
+  fprintf(stderr, "\n check yield 1st \n");
   ASSERT(chloros::Yield() == false);
+  fprintf(stderr, "\n spawn worker from yield \n");
   chloros::Spawn(Worker, nullptr);
   ASSERT(counter == 1);
+  fprintf(stderr, "\n wait from yield \n");
   chloros::Wait();
+  fprintf(stderr, "\n wake up from wait in yield \n");
   ASSERT(counter == 2);
+  fprintf(stderr, "\n check yield 2nd \n");
   ASSERT(chloros::Yield() == false);
+  fprintf(stderr, "\n CheckYield finished \n");
 }
 
 static void CheckSpawn() {
