@@ -212,6 +212,7 @@ bool Yield(bool only_ready) {
   fprintf(stderr, "\n context switch \n");
   queue_lock.unlock();
   ContextSwitch(prev_context, &(current_thread->context));
+  GarbageCollect();
 
   // queue_lock.unlock();
   fprintf(stderr, "\n post context switch \n");
@@ -228,6 +229,19 @@ void Wait() {
 
 void GarbageCollect() {
   // FIXME: Phase 4
+  std::lock_guard<std::mutex> lock{queue_lock};
+
+  // We do not erase in place because it is a bad idea
+  // to modify the vector using iterator, while u iterate
+  std::vector<std::unique_ptr<Thread>> new_thread_queue{};
+  for (auto&& thread : thread_queue) {
+    if (thread->state != Thread::State::kZombie) {
+      new_thread_queue.push_back(std::move(thread));
+    }
+  }
+
+  thread_queue.clear();
+  thread_queue = std::move(new_thread_queue);
 }
 
 std::pair<int, int> GetThreadCount() {
