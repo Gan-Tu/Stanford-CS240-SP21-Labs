@@ -1,0 +1,30 @@
+# Phase 5 Extra Credit
+
+I chose to do the "Data Races" task.
+
+The code example is `include/extra_credit_example.cpp` and you can compile it with
+
+```
+make
+
+g++ include/extra_credit_example.cpp -o extra_credit_example -g -Wall -Wextra -std=c++14 -Iinclude -DDEBUG -Llib -lchloros -pthread -fsanitize=thread
+
+./extra_credit_example
+```
+
+## What I did
+
+In `include/extra_credit_example.cpp`, I created a data structure called `ExampleData` that has a `is_ready` boolean flag and a string `value`. The example spawns multiple kernel threads, which each kernel thread runs a single user thread called `ReaderWriterThread`.
+
+The `ReaderWriterThread` uses a double checked locking paradigm that it first checks if the example data's `is_ready` flag is true. If it is true, it simply go ahead and print the value. Otherwise, it acquires the data lock, rechecks if the example is ready, and if not, set the value to `Hello World from thread %d` (with the thread id) and flip the flag to true, before unlocking the lock and print the value.
+
+I added a tiny sleep for a few microsecond inside the lock for each thread, so the ThreadSanitizer can catch the data race more easily. Otherwise, the scheduling in practice for me usually finishes each kernel thread before another get a chance to run or interleave.
+
+## Why is it a data race.
+
+The double locking paradigm tries to read `is_ready` and if it is true, print the value directly. However, without memory consistency, the flag could be set to true before the value is set, so another thread could be using a bad, uninitialized data.
+
+
+## How ThreadSanitizer catches it
+
+The ThreadSanitizer checks for conflicting pairs of memory access where one holds a lock but another doesn't (at least it seems from the thread sanitizer trace). It reports the sequence of the memory access, the location, and the heap memory where the conflicting memory access occurred.
