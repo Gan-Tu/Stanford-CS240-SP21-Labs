@@ -108,14 +108,13 @@ void Thread::PrintDebug() {
 void Initialize() {
   auto new_thread = std::make_unique<Thread>(false);
   new_thread->state = Thread::State::kWaiting;
+  new_thread->is_initial_kernel_thread = true;
   initial_thread_id = new_thread->id;
-  new_thread->initial_kernel_thread_id = initial_thread_id;
   current_thread = std::move(new_thread);
 }
 
 void Spawn(Function fn, void *arg) {
   auto new_thread = std::make_unique<Thread>(true);
-  new_thread->initial_kernel_thread_id = initial_thread_id;
 
   // FIXME: Phase 3
   // Set up the initial stack, and put it in `thread_queue`. Must yield to it
@@ -179,7 +178,7 @@ bool Yield(bool only_ready) {
         ((*it)->state == Thread::State::kWaiting && !only_ready)) {
       if (current_thread->id != initial_thread_id) {
         break;
-      } else if ((*it)->initial_kernel_thread_id == initial_thread_id) {
+      } else if (!(*it)->is_initial_kernel_thread) {
         // If this is the initial kernel thread, we never switch to another
         // kernel thread. If no other threads are able to run next in this
         // kernel thread, we will run the initial kernel thread instead.
