@@ -143,7 +143,7 @@ void Spawn(Function fn, void *arg) {
 
   // x64 ABI mandates the stack pointer to be 16-byte aligned, and since
   // we have three things to push, we will have an empty offset at start
-  current_rsp -= 2*offset;
+  current_rsp -= 2 * offset;
   *(void **)current_rsp = (void *)arg;
 
   current_rsp -= offset;

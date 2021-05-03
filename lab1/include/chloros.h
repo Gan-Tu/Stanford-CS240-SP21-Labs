@@ -47,7 +47,7 @@ struct Thread {
   uint64_t id;
   State state;
   Context context;
-  uint8_t* stack;
+  uint8_t *stack;
   // True, if this is the initial thread on this kernel thread.
   bool is_initial_kernel_thread = false;
 
@@ -57,17 +57,17 @@ struct Thread {
   ~Thread();
 
   // Disable copying and moving.
-  Thread(Thread const&) = delete;
-  Thread(Thread&&) = delete;
-  Thread& operator=(Thread const&) = delete;
-  Thread& operator=(Thread&&) = delete;
+  Thread(Thread const &) = delete;
+  Thread(Thread &&) = delete;
+  Thread &operator=(Thread const &) = delete;
+  Thread &operator=(Thread &&) = delete;
 
   // Print debug information about the thread. Might be useful for your
   // debugging.
   void PrintDebug();
 };
 
-using Function = std::add_pointer<void(void*)>::type;
+using Function = std::add_pointer<void(void *)>::type;
 
 // Initialize with current context. This function will grab current running
 // context and set it as `current_thread`, so we have something to switch from.
@@ -81,7 +81,7 @@ void Initialize();
 
 // Create a new green thread and execute function inside it. After allocating
 // and initializing the thread, current thread must yield execution to it.
-void Spawn(Function fn, void* arg);
+void Spawn(Function fn, void *arg);
 
 // Yield execution. Make sure it behaves like a round-robin scheduler! Returns
 // whether the action was successful. If there are no other thread to yield to,
@@ -109,9 +109,9 @@ extern "C" {
 // Entry function for threads that are spawn. This will be called by the
 // assembly function `start_thread`, which will fetch the arguments on stack and
 // put them in the correct registers.
-void ThreadEntry(Function fn, void* arg) __asm__("thread_entry");
+void ThreadEntry(Function fn, void *arg) __asm__("thread_entry");
 }
 
-}  // namespace chloros
+} // namespace chloros
 
-#endif  // CHLOROS_INCLUDE_CHLOROS_H_
+#endif // CHLOROS_INCLUDE_CHLOROS_H_

@@ -1,10 +1,10 @@
-#include <chloros.h>
 #include <atomic>
-#include <thread>
-#include <mutex>
-#include <vector>
+#include <chloros.h>
 #include <memory>
+#include <mutex>
 #include <string>
+#include <thread>
+#include <vector>
 
 constexpr int const kKernelThreads = 5;
 
@@ -16,13 +16,13 @@ struct ExampleData {
 std::mutex data_lock{};
 std::unique_ptr<ExampleData> example_data{nullptr};
 
-void ReaderWriterThread(void* arg) {
-  int n = *reinterpret_cast<int*>(&arg);
+void ReaderWriterThread(void *arg) {
+  int n = *reinterpret_cast<int *>(&arg);
   printf("Reader Writer thread %d starts running.\n", n);
   if (!example_data->is_ready) {
     data_lock.lock();
     if (!example_data->is_ready) {
-      std::this_thread::sleep_for (std::chrono::microseconds(500));
+      std::this_thread::sleep_for(std::chrono::microseconds(500));
       char buff[100];
       sprintf(buff, "Hello from thread %d", n);
       example_data->value = std::string(buff);
@@ -36,7 +36,7 @@ void ReaderWriterThread(void* arg) {
 
 void ThreadWorker(int n) {
   chloros::Initialize();
-  chloros::Spawn(ReaderWriterThread, reinterpret_cast<void*>(n));
+  chloros::Spawn(ReaderWriterThread, reinterpret_cast<void *>(n));
   chloros::Wait();
   printf("Finished thread worker\n");
 }
