@@ -73,3 +73,6 @@ libs/include
 
 # Scratch space
 scratch/
+
+# Visual Studio Code
+.vscode
