@@ -1,14 +1,14 @@
 /* #define DEBUG */
 
-#include <ftw.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <strings.h>
-#include <string.h>
-#include <inttypes.h>
-#include <errno.h>
-#include <unistd.h>
 #include <db.h>
+#include <errno.h>
+#include <ftw.h>
+#include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <unistd.h>
 
 #include "common.h"
 #include "server.h"
@@ -90,13 +90,10 @@ static char *find(const void *key, size_t keylen, size_t *vallen) {
   init_db_if_needed();
 
   // The key to fetch.
-  DBT db_key = (DBT) {
-    .data = (void *)key,
-    .size = keylen
-  };
+  DBT db_key = (DBT){.data = (void *)key, .size = keylen};
 
   // Where the call will place the result.
-  DBT db_value = (DBT) { .data = NULL }; // Really, zero initialize.
+  DBT db_value = (DBT){.data = NULL};  // Really, zero initialize.
 
   // Some nice debug info.
   if_debug {
@@ -142,14 +139,14 @@ static void insert(const void *key, size_t klen, const void *val, size_t vlen) {
 
   init_db_if_needed();
 
-  DBT db_key = (DBT) {
-    .data = (void *)key,
-    .size = klen,
+  DBT db_key = (DBT){
+      .data = (void *)key,
+      .size = klen,
   };
 
-  DBT db_value = (DBT) {
-    .data = (void *)val,
-    .size = vlen,
+  DBT db_value = (DBT){
+      .data = (void *)val,
+      .size = vlen,
   };
 
   int err = DBP->put(DBP, NULL, &db_key, &db_value, 0);
