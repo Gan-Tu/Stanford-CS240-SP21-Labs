@@ -270,7 +270,7 @@ void handle_mount(int sock) {
   debug("Handling MOUNT.\n");
 
   snfs_rep reply = make_reply(MOUNT, .mount_rep = {
-    .root = SNFS_DUMMY_FH // FIXME: Replace this with something useful.
+    .root = name_find_or_insert("/")
   });
 
   if (send_reply(sock, &reply, snfs_rep_size(mount)) < 0) {
