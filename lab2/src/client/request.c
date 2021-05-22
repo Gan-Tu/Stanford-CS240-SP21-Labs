@@ -119,11 +119,13 @@ void test_connection(int sock, const char *url) {
  * @return true if the root file handle was retrieved, false otherwise
  */
 bool server_mount(int sock, const char *url, fhandle *root) {
-  UNUSED(sock);
-  UNUSED(url);
-  UNUSED(root);
-
-  // FIXME: Create, send, and wait for reply indefinitely for MOUNT request.
-
-  return false;
+  snfs_req request = make_request(MOUNT, /* No arguments. */);
+  snfs_rep *reply = snfs_req_rep(sock, url, &request, snfs_req_size(mount));
+  if (!reply) {
+    print_err("The server did not reply with a valid response for mount!\n");
+    return false;
+  }
+  *root = reply->content.mount_rep.root;
+  nn_freemsg(reply);
+  return true;
 }
