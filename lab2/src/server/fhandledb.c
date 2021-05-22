@@ -203,14 +203,18 @@ static fhandle new_fhandle(const char *filename) {
  * @return the filename's fhandle
  */
 fhandle name_find_or_insert(const char *filename) {
-  UNUSED(new_fhandle);
-
   assert(filename);
   debug("n_f_o_i for %s\n", filename);
 
-  // FIXME: Implement this function.
+  size_t rlen;
+  char *result = find(filename, strlen(filename) + 1, &rlen);
+  if (result) {
+    fhandle handle = *(fhandle *)result;
+    free(result);
+    return handle;
+  }
 
-  return -1;
+  return new_fhandle(filename);
 }
 
 /**
@@ -223,9 +227,6 @@ fhandle name_find_or_insert(const char *filename) {
  * @return a malloc()d filename if it is found, NULL otherwise
  */
 const char *get_file(fhandle handle) {
-  UNUSED(handle);
-
-  // FIXME: Implement this function.
-
-  return NULL;
+  size_t rlen;
+  return find(&handle, sizeof(fhandle), &rlen);
 }
