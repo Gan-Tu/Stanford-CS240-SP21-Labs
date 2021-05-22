@@ -1,21 +1,20 @@
 /* #define DEBUG */
 #define FUSE_USE_VERSION 26
 
-#include <errno.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <getopt.h>
-#include <fuse.h>
-#include <fcntl.h>
 #include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <fuse.h>
+#include <getopt.h>
 #include <inttypes.h>
-
 #include <nanomsg/nn.h>
 #include <nanomsg/reqrep.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "common.h"
 #include "client.h"
+#include "common.h"
 
 /**
  * Takes the attributes in fattr `attr` and stores them in struct state `st`,
@@ -182,7 +181,7 @@ int snfs_getattr(const char *path, struct stat *stbuf) {
  * @return 0 on success, < 0 (a -errno) on error
  */
 int snfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
-    off_t offset, struct fuse_file_info *fi) {
+                 off_t offset, struct fuse_file_info *fi) {
   UNUSED(offset);
   UNUSED(fi);
 
@@ -191,10 +190,13 @@ int snfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     return -ENOENT;
   }
 
-  snfs_req request = make_request(READDIR, .readdir_args = {
-    .dir = handle,
-    .count = 256, // Max number of directories supported...kind of foolish
-  });
+  snfs_req request = make_request(
+      READDIR,
+      .readdir_args = {
+          .dir = handle,
+          .count =
+              256,  // Max number of directories supported...kind of foolish
+      });
 
   // Send off the readdir request and ensure it's valid
   snfs_rep *reply = send_request(&request, snfs_req_size(readdir));
@@ -250,15 +252,16 @@ int snfs_open(const char *path, struct fuse_file_info *fi) {
  * @return the number of bytes read or < 0 (-errno) on error
  */
 int snfs_read(const char *path, char *buf, size_t count, off_t offset,
-    struct fuse_file_info *fi) {
-  verbose(STATE->options.verbose, "-- READ: '%s', %"PRIu64" ", path, fi->fh);
-  verbose(STATE->options.verbose, "[%"PRId64":%"PRId64"\n", offset, count + offset);
+              struct fuse_file_info *fi) {
+  verbose(STATE->options.verbose, "-- READ: '%s', %" PRIu64 " ", path, fi->fh);
+  verbose(STATE->options.verbose, "[%" PRId64 ":%" PRId64 "\n", offset,
+          count + offset);
 
   snfs_req request = make_request(READ, .read_args = {
-    .file = fi->fh,
-    .offset = offset,
-    .count = count,
-  });
+                                            .file = fi->fh,
+                                            .offset = offset,
+                                            .count = count,
+                                        });
 
   snfs_rep *reply = send_request(&request, snfs_req_size(read));
   if (!reply) {
@@ -291,12 +294,12 @@ int snfs_read(const char *path, char *buf, size_t count, off_t offset,
  * @return exactly the number of bytes requested or something else on error
  */
 int snfs_write(const char *path, const char *buf, size_t count, off_t offset,
-    struct fuse_file_info *fi) {
+               struct fuse_file_info *fi) {
   UNUSED(buf);
 
-  verbose(STATE->options.verbose, "-- WRITE: '%s', %"PRIu64" ", path, fi->fh);
-  verbose(STATE->options.verbose, "[%"PRId64":%"PRId64"]\n",
-      offset, count + offset);
+  verbose(STATE->options.verbose, "-- WRITE: '%s', %" PRIu64 " ", path, fi->fh);
+  verbose(STATE->options.verbose, "[%" PRId64 ":%" PRId64 "]\n", offset,
+          count + offset);
 
   // FIXME: Send a WRITE request with contents of `buf`, return server's count
 
@@ -318,8 +321,9 @@ int snfs_write(const char *path, const char *buf, size_t count, off_t offset,
  * @return 0 on success, < 0 (-errno or -1) otherwise
  */
 int snfs_setattr(const char *path, uint64_t which, off_t size, mode_t mode,
-    gid_t uid, uid_t gid, const struct timespec tv[2]) {
-  verbose(STATE->options.verbose, "-- SETATTR: '%s', %"PRIX64"\n", path, which);
+                 gid_t uid, uid_t gid, const struct timespec tv[2]) {
+  verbose(STATE->options.verbose, "-- SETATTR: '%s', %" PRIX64 "\n", path,
+          which);
 
   fhandle handle;
   if (!lookup(path, &handle)) {
@@ -327,26 +331,24 @@ int snfs_setattr(const char *path, uint64_t which, off_t size, mode_t mode,
     return -ENOENT;
   }
 
-  snfs_timeval atime = { 0, 0 };
-  snfs_timeval mtime = { 0, 0 };
+  snfs_timeval atime = {0, 0};
+  snfs_timeval mtime = {0, 0};
 
   if (tv) {
     atime.seconds = tv[0].tv_sec;
     atime.useconds = tv[0].tv_nsec * 1000;
-    mtime.seconds = tv[1].tv_sec,
-    mtime.useconds = tv[1].tv_nsec * 1000;
+    mtime.seconds = tv[1].tv_sec, mtime.useconds = tv[1].tv_nsec * 1000;
   }
 
-  snfs_req request = make_request(SETATTR, .setattr_args = {
-    .file = handle,
-    .which = (uint64_t) which,
-    .size = (uint64_t) size,
-    .mode = (uint64_t) mode,
-    .uid = (uint64_t) uid,
-    .gid = (uint64_t) gid,
-    .atime = atime,
-    .mtime = mtime
-  });
+  snfs_req request =
+      make_request(SETATTR, .setattr_args = {.file = handle,
+                                             .which = (uint64_t)which,
+                                             .size = (uint64_t)size,
+                                             .mode = (uint64_t)mode,
+                                             .uid = (uint64_t)uid,
+                                             .gid = (uint64_t)gid,
+                                             .atime = atime,
+                                             .mtime = mtime});
 
   snfs_rep *reply = send_request(&request, snfs_req_size(setattr));
   if (!reply) {
@@ -372,7 +374,8 @@ int snfs_setattr(const char *path, uint64_t which, off_t size, mode_t mode,
  * @return 0 on success, < 0 (-errno) on error
  */
 int snfs_truncate(const char *path, off_t size) {
-  verbose(STATE->options.verbose, "-- TRUNCATE: '%s', %"PRIu64"\n", path, size);
+  verbose(STATE->options.verbose, "-- TRUNCATE: '%s', %" PRIu64 "\n", path,
+          size);
   return snfs_setattr(path, SNFS_SETSIZE, size, 0, 0, 0, 0);
 }
 
@@ -406,8 +409,8 @@ int snfs_chown(const char *path, uid_t uid, gid_t gid) {
   verbose(STATE->options.verbose, "-- CHOWN: '%s', (%d, %d)\n", path, uid, gid);
   uint64_t which = 0;
 
-  if ((int) uid != -1) which |= SNFS_SETUID;
-  if ((int) gid != -1) which |= SNFS_SETGID;
+  if ((int)uid != -1) which |= SNFS_SETUID;
+  if ((int)gid != -1) which |= SNFS_SETGID;
 
   return snfs_setattr(path, which, 0, 0, uid, gid, 0);
 }
@@ -424,6 +427,6 @@ int snfs_chown(const char *path, uid_t uid, gid_t gid) {
  */
 int snfs_utimens(const char *path, const struct timespec tv[2]) {
   verbose(STATE->options.verbose, "-- UTIME: '%s', (%ld.%ld), (%ld.%ld)\n",
-      path, tv[0].tv_sec, tv[0].tv_nsec, tv[1].tv_sec, tv[1].tv_nsec);
+          path, tv[0].tv_sec, tv[0].tv_nsec, tv[1].tv_sec, tv[1].tv_nsec);
   return snfs_setattr(path, SNFS_SETTIMES, 0, 0, 0, 0, tv);
 }
