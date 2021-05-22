@@ -54,6 +54,8 @@ libs/include
 *.dirstamp
 *.libs
 **/nanomsg/Makefile
+**/nanomsg/Makefile.in
+**/nanomsg/configure
 **/nanomsg/config.h
 **/nanomsg/config.log
 **/nanomsg/config.status
