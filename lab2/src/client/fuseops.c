@@ -124,13 +124,49 @@ bool lookup(const char *path, fhandle *handle) {
 
   verbose(STATE->options.verbose, "Looking up %s.\n", path);
 
+  // Return root handle, if applicable
   if (!strcmp(path, "/")) {
     *handle = STATE->root_fhandle;
     return true;
   }
 
-  // FIXME: Iteratively send LOOKUP requests to find the handle for `path`.
-  return false;
+  fhandle cur_handle = STATE->root_fhandle;
+
+  // Make a copy of the path in order to tokenize by "/" delimiter
+  char path_copy[strlen(path) + 1];
+  strcpy(path_copy, path);
+
+  // Prepare lookup request and reply object
+  snfs_req request = make_request(LOOKUP, /* fill in later */);
+  snfs_lookup_args *args = &request.content.lookup_args;
+  snfs_rep *reply;
+
+  char *filename;
+  filename = strtok(path_copy, "/");
+  while (filename != NULL) {
+    // Skip empty spaces, which can occur due to "//"
+    if (strlen(filename) == 0) {
+      filename = strtok(NULL, "/");
+      continue;
+    }
+
+    args->dir = cur_handle;
+    memset((char *)args->filename, '\0', sizeof(SNFS_MAX_FILENAME_BUF));
+    strncpy((char *)args->filename, filename, SNFS_MAX_FILENAME_LENGTH);
+
+    reply = send_request(&request, snfs_req_size(lookup));
+    if (!reply) {
+      return false;
+    }
+
+    cur_handle = reply->content.lookup_rep.handle;
+    nn_freemsg(reply);
+
+    filename = strtok(NULL, "/");
+  }
+
+  *handle = cur_handle;
+  return true;
 }
 
 /**
