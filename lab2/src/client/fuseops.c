@@ -151,10 +151,9 @@ bool lookup(const char *path, fhandle *handle) {
     }
 
     args->dir = cur_handle;
-    memset(args->filename, '\0',
-           sizeof(uint8_t) * SNFS_MAX_FILENAME_BUF);
-    memcpy(args->filename, (uint8_t *) filename,
-            sizeof(uint8_t) * SNFS_MAX_FILENAME_LENGTH);
+    memset(args->filename, '\0', sizeof(uint8_t) * SNFS_MAX_FILENAME_BUF);
+    memcpy(args->filename, (uint8_t *)filename,
+           sizeof(uint8_t) * SNFS_MAX_FILENAME_LENGTH);
 
     reply = send_request(&request, snfs_req_size(lookup));
     if (!reply) {
@@ -277,12 +276,16 @@ int snfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
  * @return 0 on success, < 0 (a -errno) otherwise
  */
 int snfs_open(const char *path, struct fuse_file_info *fi) {
-  UNUSED(path);
-  UNUSED(fi);
+  assert(path);
+  assert(fi);
 
-  // FIXME: Lookup `path` and set fi->fh to be its handle
+  fhandle handle;
+  if (!lookup(path, &handle)) {
+    return -ENOENT;
+  }
+  fi->fh = handle;
 
-  return -ENOENT;
+  return 0;
 }
 
 /**
