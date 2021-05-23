@@ -196,8 +196,6 @@ void handle_readdir(int sock, snfs_readdir_args *args) {
  * @param args the client's arguments
  */
 void handle_lookup(int sock, snfs_lookup_args *args) {
-  UNUSED(sock);
-  UNUSED(args);
   debug("Looking up %s in %" PRIu64 "\n", args->filename, args->dir);
 
   // Get the path from the fhandle
