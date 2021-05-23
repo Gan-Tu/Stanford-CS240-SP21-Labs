@@ -130,9 +130,28 @@ void handle_noop(int sock) {
 void handle_getattr(int sock, snfs_getattr_args *args) {
   debug("Handling getattr for %" PRIu64 "\n", args->fh);
 
-  // FIXME: Lookup name for `args->fh`, stat the file, and send a GETATTR reply
-  // NOTE: The `stat_to_fattr` function is likely useful here.
-  handle_unimplemented(sock, GETATTR);
+  const char *filename = get_file(args->fh);
+  if (!filename) {
+    return handle_error(sock, SNFS_ENOENT);
+  }
+
+  struct stat st;
+  if (stat(filename, &st)) {
+    return handle_error(sock, SNFS_EINTERNAL);
+  }
+
+  fattr attributes;
+  stat_to_fattr(&st, &attributes);
+
+  snfs_rep reply =
+      make_reply(GETATTR, .getattr_rep = {.attributes = attributes});
+
+  debug("Sending file attributes for %" PRIu64 "\n", args->fh);
+  if (send_reply(sock, &reply, snfs_rep_size(getattr)) < 0) {
+    print_err("Failed to send reply to getattr for %s.\n", filename);
+  }
+
+  free((void *)filename);
 }
 
 /**

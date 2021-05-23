@@ -182,14 +182,24 @@ bool lookup(const char *path, fhandle *handle) {
  * @return 0 on success, < 0 (a -errno error code) otherwise
  */
 int snfs_getattr(const char *path, struct stat *stbuf) {
-  UNUSED(stbuf);
-  UNUSED(fattr_to_stat);
-
   verbose(STATE->options.verbose, "-- GETATTR START: %s\n", path);
 
-  // FIXME: Lookup handle for `path`, send a `GETATTR` request, fill in `stbuf`
+  fhandle handle;
+  if (!lookup(path, &handle)) {
+    return -ENOENT;
+  }
 
-  return -ENOENT;
+  snfs_req request = make_request(GETATTR, .getattr_args = {.fh = handle});
+  snfs_rep *reply = send_request(&request, snfs_req_size(getattr));
+  if (!reply) {
+    return -EIO;
+  }
+
+  fattr_to_stat(&reply->content.getattr_rep.attributes, stbuf);
+
+  nn_freemsg(reply);
+
+  return 0;
 }
 
 /**
