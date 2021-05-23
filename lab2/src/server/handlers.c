@@ -132,11 +132,13 @@ void handle_getattr(int sock, snfs_getattr_args *args) {
 
   const char *file_path = get_file(args->fh);
   if (!file_path) {
+    debug("Did not find path for file handle: %" PRIu64 "\n", args->fh);
     return handle_error(sock, SNFS_ENOENT);
   }
 
   struct stat st;
   if (stat(file_path, &st)) {
+    debug("Bad stat for file path %s\n", file_path);
     snfs_error err = (errno == ENOENT) ? SNFS_ENOENT : SNFS_EINTERNAL;
     free((void *)file_path);
     return handle_error(sock, err);
@@ -148,7 +150,7 @@ void handle_getattr(int sock, snfs_getattr_args *args) {
   snfs_rep reply =
       make_reply(GETATTR, .getattr_rep = {.attributes = attributes});
 
-  debug("Sending file attributes for %" PRIu64 "\n", args->fh);
+  debug("Found %s. Sending file attributes\n", file_path);
   if (send_reply(sock, &reply, snfs_rep_size(getattr)) < 0) {
     print_err("Failed to send reply to getattr for %s.\n", file_path);
   }
