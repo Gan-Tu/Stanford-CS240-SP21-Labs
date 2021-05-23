@@ -130,14 +130,16 @@ void handle_noop(int sock) {
 void handle_getattr(int sock, snfs_getattr_args *args) {
   debug("Handling getattr for %" PRIu64 "\n", args->fh);
 
-  const char *filename = get_file(args->fh);
-  if (!filename) {
+  const char *file_path = get_file(args->fh);
+  if (!file_path) {
     return handle_error(sock, SNFS_ENOENT);
   }
 
   struct stat st;
-  if (stat(filename, &st)) {
-    return handle_error(sock, SNFS_EINTERNAL);
+  if (stat(file_path, &st)) {
+    snfs_error err = (errno == ENOENT) ? SNFS_ENOENT : SNFS_EINTERNAL;
+    free((void *)file_path);
+    return handle_error(sock, err);
   }
 
   fattr attributes;
@@ -148,10 +150,10 @@ void handle_getattr(int sock, snfs_getattr_args *args) {
 
   debug("Sending file attributes for %" PRIu64 "\n", args->fh);
   if (send_reply(sock, &reply, snfs_rep_size(getattr)) < 0) {
-    print_err("Failed to send reply to getattr for %s.\n", filename);
+    print_err("Failed to send reply to getattr for %s.\n", file_path);
   }
 
-  free((void *)filename);
+  free((void *)file_path);
 }
 
 /**
