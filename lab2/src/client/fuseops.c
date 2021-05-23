@@ -151,8 +151,10 @@ bool lookup(const char *path, fhandle *handle) {
     }
 
     args->dir = cur_handle;
-    memset((char *)args->filename, '\0', sizeof(SNFS_MAX_FILENAME_BUF));
-    strncpy((char *)args->filename, filename, SNFS_MAX_FILENAME_LENGTH);
+    memset(args->filename, '\0',
+           sizeof(uint8_t) * SNFS_MAX_FILENAME_BUF);
+    memcpy(args->filename, (uint8_t *) filename,
+            sizeof(uint8_t) * SNFS_MAX_FILENAME_LENGTH);
 
     reply = send_request(&request, snfs_req_size(lookup));
     if (!reply) {
