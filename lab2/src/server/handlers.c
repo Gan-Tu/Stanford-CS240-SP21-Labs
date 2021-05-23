@@ -394,11 +394,78 @@ void handle_mount(int sock) {
  * @param args the client's arguments
  */
 void handle_read(int sock, snfs_read_args *args) {
-  UNUSED(sock);
-  UNUSED(args);
+  debug("Handling read from %" PRIu64 " ", args->file);
+  debug("[%" PRId64 ":%" PRId64 "]\n", args->offset,
+        args->offset + args->count);
 
-  // FIXME: Lookup `args->file`, open, seek, then read into a READ reply
-  handle_unimplemented(sock, READ);
+  const char *file_path = get_file(args->file);
+  if (!file_path) {
+    debug("Did not find path for read: %" PRIu64 "\n", args->file);
+    return handle_error(sock, SNFS_ENOENT);
+  }
+
+  // Get file size
+  struct stat st;
+  if (stat(file_path, &st)) {
+    debug("Bad stat for file path %s\n", file_path);
+    handle_error(sock, (errno == ENOENT) ? SNFS_ENOENT : SNFS_EINTERNAL);
+    return free((void *)file_path);
+  }
+  ssize_t file_size = (ssize_t) st.st_size;
+
+  // Try to open the file, and exit early if there's an issue.
+  int fd = open(file_path, O_RDONLY);
+  if (fd < 0) {
+    debug("Failed to open file: %s\n", file_path);
+    if (errno == ENOENT) {
+      handle_error(sock, SNFS_ENOENT);
+    } else if (errno == EACCES) {
+      handle_error(sock, SNFS_EACCES);
+    } else {
+      handle_error(sock, SNFS_EINTERNAL);
+    }
+    return free((void *)file_path);
+  }
+
+  // Try to set the offset requested by the user.
+  off_t offset = lseek(fd, args->offset, SEEK_SET);
+  if (offset < 0 || offset != args->offset) {
+    debug("Couldn't set client offset.\n");
+    handle_error(sock, (offset < 0) ? SNFS_EINTERNAL : SNFS_EBADOP);
+    close(fd);
+    return free((void *)file_path);
+  }
+
+  // Read the file
+  void *buff[args->count];
+  ssize_t bytes_read = 0;
+  if (offset < file_size) {
+    bytes_read = read(fd, buff, args->count);
+    if (bytes_read < 0) {
+      print_err("Internal issue read()! %s\n", strerror(errno));
+      handle_error(sock, SNFS_EINTERNAL);
+      close(fd);
+      return free((void *)file_path);
+    }
+  }
+
+  size_t reply_size = snfs_rep_size(read) + bytes_read;
+  snfs_rep *reply = (snfs_rep *)malloc(reply_size);
+  assert_malloc(reply);
+
+  reply->type = READ;
+  reply->content.read_rep.count = bytes_read;
+  reply->content.read_rep.eof = (bytes_read < (ssize_t) args->count);
+  memcpy(reply->content.read_rep.data, buff, bytes_read);
+
+  debug("Read for %" PRIu64 " done! Read %zd bytes.\n", args->file, bytes_read);
+  if (send_reply(sock, reply, reply_size) < 0) {
+    print_err("Failed to send reply to read for %s.\n", file_path);
+  }
+
+  close(fd);
+  free((void *)reply);
+  free((void *)file_path);
 }
 
 /**
