@@ -338,7 +338,7 @@ int snfs_read(const char *path, char *buf, size_t count, off_t offset,
  *
  * @param path the path to the file; should be unused. handle is in fi->fh
  * @param buf the buffer to write bytes from
- * @param count the number of bytes to read
+ * @param count the number of bytes to write
  * @param offset the offset to start writing to
  * @param the FUSE file info. fi->fh is the file handle
  *
@@ -346,15 +346,34 @@ int snfs_read(const char *path, char *buf, size_t count, off_t offset,
  */
 int snfs_write(const char *path, const char *buf, size_t count, off_t offset,
                struct fuse_file_info *fi) {
-  UNUSED(buf);
+  assert(path);
+  assert(buf);
+  assert(fi);
 
   verbose(STATE->options.verbose, "-- WRITE: '%s', %" PRIu64 " ", path, fi->fh);
   verbose(STATE->options.verbose, "[%" PRId64 ":%" PRId64 "]\n", offset,
           count + offset);
 
-  // FIXME: Send a WRITE request with contents of `buf`, return server's count
+  size_t request_size = snfs_req_size(write) + count;
+  snfs_req *request = (snfs_req *)malloc(request_size);
+  assert_malloc(request);
 
-  return -EIO;
+  request->type = WRITE;
+  request->content.write_args.file = fi->fh;
+  request->content.write_args.offset = offset;
+  request->content.write_args.count = count;
+  memcpy(request->content.write_args.data, buf, count);
+
+  snfs_rep *reply = send_request(request, request_size);
+  if (!reply) {
+    free(request);
+    return -EIO;
+  }
+
+  uint64_t bytes_written = reply->content.write_rep.count;
+  free(request);
+  nn_freemsg(reply);
+  return bytes_written;
 }
 
 /**
