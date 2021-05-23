@@ -174,8 +174,91 @@ void handle_getattr(int sock, snfs_getattr_args *args) {
 void handle_readdir(int sock, snfs_readdir_args *args) {
   debug("Handling readdir: count %" PRIu64 "\n", args->count);
 
-  // FIXME: Lookup `args->fh`, readdir, fill entries, send READDIR reply
-  handle_unimplemented(sock, READDIR);
+  // Get the path from the fhandle
+  const char *dir_path = get_file(args->dir);
+  if (!dir_path) {
+    debug("Did not find path for readdir dir: %" PRIu64 "\n", args->dir);
+    return handle_error(sock, SNFS_ENOENT);
+  }
+
+  // Ensure the file exists and the path supplied was valid
+  struct stat st;
+  if (stat(dir_path, &st)) {
+    debug("Bad stat for dir path %s\n", dir_path);
+    if (errno == ENOENT) {
+      handle_error(sock, SNFS_ENOENT);
+    } else {
+      handle_error(sock, SNFS_EINTERNAL);
+    }
+    return free((void *)dir_path);
+  }
+
+  // Make sure the handle points to a directory
+  if (!S_ISDIR(st.st_mode)) {
+    debug("Not a directory: %s\n", dir_path);
+    handle_error(sock, SNFS_ENOTDIR);
+    return free((void *)dir_path);
+  }
+
+  // Okay, let's try opening the directory
+  DIR *dir = opendir(dir_path);
+  if (!dir) {
+    debug("Failed to open directory: %s\n", dir_path);
+    if (errno == ENOENT) {
+      handle_error(sock, SNFS_ENOENT);
+    } else if (errno == ENOTDIR) {
+      handle_error(sock, SNFS_ENOTDIR);
+    } else if (errno == EACCES) {
+      handle_error(sock, SNFS_EACCES);
+    } else {
+      handle_error(sock, SNFS_EINTERNAL);
+    }
+    return free((void *)dir_path);
+  }
+
+  // Now, let's iterate the directory entries
+  snfsentry entries[args->count];
+  struct dirent *entry;
+  uint64_t entries_read = 0;
+  // Since readdir returns NULL for both error conditions and end of stream, we
+  // set the errono to zero before calling the function in order to distinguish
+  // them, as advised by https://man7.org/linux/man-pages/man3/readdir.3.html
+  errno = 0;
+
+  while ((entry = readdir(dir)) != NULL && entries_read < args->count) {
+    snfsentry snfs_entry = {.fileid = entry->d_ino};
+    memset(snfs_entry.filename, '\0', sizeof(uint8_t) * SNFS_MAX_FILENAME_BUF);
+    memcpy(snfs_entry.filename, (uint8_t *)entry->d_name,
+           sizeof(uint8_t) * SNFS_MAX_FILENAME_LENGTH);
+
+    entries[entries_read] = snfs_entry;
+    entries_read++;
+  }
+
+  // Return any error encountered
+  if (errno != 0) {
+    debug("Error encountered when reading directory: %s\n", dir_path);
+    handle_error(sock, SNFS_EINTERNAL);
+    free((void *)dir_path);
+    return;
+  }
+
+  size_t reply_size = snfs_rep_size(readdir) + sizeof(snfsentry) * entries_read;
+  snfs_rep *reply = (snfs_rep *)malloc(reply_size);
+  assert_malloc(reply);
+
+  reply->type = READDIR;
+  reply->content.readdir_rep.num_entries = entries_read;
+  memcpy(reply->content.readdir_rep.entries, entries,
+         sizeof(snfsentry) * entries_read);
+
+  debug("Found %" PRIu64 " entries for %s.\n", entries_read, dir_path);
+  if (send_reply(sock, reply, reply_size) < 0) {
+    print_err("Failed to send reply to readdir for %s.\n", dir_path);
+  }
+
+  free((void *)reply);
+  free((void *)dir_path);
 }
 
 /**
