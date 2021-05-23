@@ -1,22 +1,21 @@
 /* #define DEBUG */
 
-#include <errno.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
-#include <getopt.h>
 #include <dirent.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/time.h>
+#include <errno.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <inttypes.h>
-#include <unistd.h>
-#include <utime.h>
-
 #include <nanomsg/nn.h>
 #include <nanomsg/reqrep.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <utime.h>
 
 #include "common.h"
 #include "server.h"
@@ -62,27 +61,27 @@ static void stat_to_fattr(struct stat *st, fattr *attr) {
     attr->type = SNFNON;
   }
 
-  attr->mode = (uint64_t) mode;
-  attr->nlink = (uint64_t) st->st_nlink;
-  attr->uid = (uint64_t) st->st_uid;
-  attr->gid = (uint64_t) st->st_gid;
-  attr->size = (uint64_t) st->st_size;
-  attr->rdev = (uint64_t) st->st_rdev;
-  attr->fsid = (uint64_t) st->st_dev;
-  attr->fileid = (uint64_t) st->st_ino;
+  attr->mode = (uint64_t)mode;
+  attr->nlink = (uint64_t)st->st_nlink;
+  attr->uid = (uint64_t)st->st_uid;
+  attr->gid = (uint64_t)st->st_gid;
+  attr->size = (uint64_t)st->st_size;
+  attr->rdev = (uint64_t)st->st_rdev;
+  attr->fsid = (uint64_t)st->st_dev;
+  attr->fileid = (uint64_t)st->st_ino;
 
   // Now timing information which is, unfortunately, platform dependent
 #if defined(__APPLE__)
-  attr->atime.useconds = (int64_t) (st->st_atimespec.tv_nsec / 1000);
-  attr->atime.seconds = (int64_t) st->st_atimespec.tv_sec;
-  attr->mtime.useconds = (int64_t) (st->st_mtimespec.tv_nsec / 1000);
-  attr->mtime.seconds = (int64_t) st->st_mtimespec.tv_sec;
-  attr->ctime.useconds = (int64_t) (st->st_ctimespec.tv_nsec / 1000);
-  attr->ctime.seconds = (int64_t) st->st_ctimespec.tv_sec;
+  attr->atime.useconds = (int64_t)(st->st_atimespec.tv_nsec / 1000);
+  attr->atime.seconds = (int64_t)st->st_atimespec.tv_sec;
+  attr->mtime.useconds = (int64_t)(st->st_mtimespec.tv_nsec / 1000);
+  attr->mtime.seconds = (int64_t)st->st_mtimespec.tv_sec;
+  attr->ctime.useconds = (int64_t)(st->st_ctimespec.tv_nsec / 1000);
+  attr->ctime.seconds = (int64_t)st->st_ctimespec.tv_sec;
 #elif defined(__linux__)
-  attr->atime.seconds = (int64_t) st->st_atime;
-  attr->mtime.seconds = (int64_t) st->st_mtime;
-  attr->ctime.seconds = (int64_t) st->st_ctime;
+  attr->atime.seconds = (int64_t)st->st_atime;
+  attr->mtime.seconds = (int64_t)st->st_mtime;
+  attr->ctime.seconds = (int64_t)st->st_ctime;
 #endif
 }
 
@@ -96,9 +95,7 @@ static void stat_to_fattr(struct stat *st, fattr *attr) {
  */
 void handle_error(int sock, snfs_error error) {
   debug("Sending error message '%s' to client.\n", strsnfserror(error));
-  snfs_rep reply = make_reply(ERROR, .error_rep = {
-    .error = error
-  });
+  snfs_rep reply = make_reply(ERROR, .error_rep = {.error = error});
 
   if (send_reply(sock, &reply, snfs_rep_size(error)) < 0) {
     print_err("Failed to send error message to client.\n");
@@ -131,7 +128,7 @@ void handle_noop(int sock) {
  * @param args the client's arguments
  */
 void handle_getattr(int sock, snfs_getattr_args *args) {
-  debug("Handling getattr for %"PRIu64"\n", args->fh);
+  debug("Handling getattr for %" PRIu64 "\n", args->fh);
 
   // FIXME: Lookup name for `args->fh`, stat the file, and send a GETATTR reply
   // NOTE: The `stat_to_fattr` function is likely useful here.
@@ -152,7 +149,7 @@ void handle_getattr(int sock, snfs_getattr_args *args) {
  * @param args the client's arguments
  */
 void handle_readdir(int sock, snfs_readdir_args *args) {
-  debug("Handling readdir: count %"PRIu64"\n", args->count);
+  debug("Handling readdir: count %" PRIu64 "\n", args->count);
 
   // FIXME: Lookup `args->fh`, readdir, fill entries, send READDIR reply
   handle_unimplemented(sock, READDIR);
@@ -178,12 +175,12 @@ void handle_readdir(int sock, snfs_readdir_args *args) {
 void handle_lookup(int sock, snfs_lookup_args *args) {
   UNUSED(sock);
   UNUSED(args);
-  debug("Looking up %s in %"PRIu64"\n", args->filename, args->dir);
+  debug("Looking up %s in %" PRIu64 "\n", args->filename, args->dir);
 
   // Get the path from the fhandle
   const char *dir_path = get_file(args->dir);
   if (!dir_path) {
-    debug("Did not find path for lookup dir: %"PRIu64"\n", args->dir);
+    debug("Did not find path for lookup dir: %" PRIu64 "\n", args->dir);
     return handle_error(sock, SNFS_ENOENT);
   }
 
@@ -237,16 +234,14 @@ void handle_lookup(int sock, snfs_lookup_args *args) {
 
   // Okay, we're golden. Get (or create) the fhandle for the file
   fhandle handle = name_find_or_insert(file_path);
-  snfs_rep reply = make_reply(LOOKUP, .lookup_rep = {
-    .handle = handle
-  });
+  snfs_rep reply = make_reply(LOOKUP, .lookup_rep = {.handle = handle});
 
   // Fill in the attributes
   fattr *attr = &reply.content.lookup_rep.attributes;
   stat_to_fattr(&st2, attr);
 
   // Send off the message
-  debug("Found '%s', sending handle %"PRIu64"\n", file_path, handle);
+  debug("Found '%s', sending handle %" PRIu64 "\n", file_path, handle);
   if (send_reply(sock, &reply, snfs_rep_size(lookup)) < 0) {
     print_err("Failed to send reply to readdir for %s.\n", dir_path);
   }
@@ -269,9 +264,8 @@ cleanup_dir_path:
 void handle_mount(int sock) {
   debug("Handling MOUNT.\n");
 
-  snfs_rep reply = make_reply(MOUNT, .mount_rep = {
-    .root = name_find_or_insert("/")
-  });
+  snfs_rep reply =
+      make_reply(MOUNT, .mount_rep = {.root = name_find_or_insert("/")});
 
   if (send_reply(sock, &reply, snfs_rep_size(mount)) < 0) {
     print_err("Failed to send root fhandle to client!\n");
@@ -319,12 +313,13 @@ void handle_read(int sock, snfs_read_args *args) {
  * @param args the client's arguments
  */
 void handle_write(int sock, snfs_write_args *args) {
-  debug("Handling write to %"PRIu64" ", args->file);
-  debug("[%"PRId64":%"PRId64"]\n", args->offset, args->offset + args->count);
+  debug("Handling write to %" PRIu64 " ", args->file);
+  debug("[%" PRId64 ":%" PRId64 "]\n", args->offset,
+        args->offset + args->count);
 
   const char *file_path = get_file(args->file);
   if (!file_path) {
-    debug("Did not find path for read: %"PRIu64"\n", args->file);
+    debug("Did not find path for read: %" PRIu64 "\n", args->file);
     return handle_error(sock, SNFS_ENOENT);
   }
 
@@ -352,10 +347,8 @@ void handle_write(int sock, snfs_write_args *args) {
     goto cleanup_fd;
   }
 
-  debug("Write for %"PRIu64" done! Wrote %zd bytes.\n", args->file, bytes);
-  snfs_rep reply = make_reply(WRITE, .write_rep = {
-    .count = bytes
-  });
+  debug("Write for %" PRIu64 " done! Wrote %zd bytes.\n", args->file, bytes);
+  snfs_rep reply = make_reply(WRITE, .write_rep = {.count = bytes});
 
   // Send it off!
   if (send_reply(sock, &reply, snfs_rep_size(write)) < 0) {
@@ -388,7 +381,7 @@ void handle_setattr(int sock, snfs_setattr_args *args) {
 
   const char *file_path = get_file(args->file);
   if (!file_path) {
-    debug("Did not find path for setattr: %"PRIu64"\n", args->file);
+    debug("Did not find path for setattr: %" PRIu64 "\n", args->file);
     return handle_error(sock, SNFS_ENOENT);
   }
 
@@ -441,9 +434,9 @@ void handle_setattr(int sock, snfs_setattr_args *args) {
       which_set |= SNFS_SETTIMES;
     } else {
       debug("utimes call failed. trying utime\n");
-      struct utimbuf time = (struct utimbuf) {
-        .actime = args->atime.seconds,
-        .modtime = args->mtime.seconds,
+      struct utimbuf time = (struct utimbuf){
+          .actime = args->atime.seconds,
+          .modtime = args->mtime.seconds,
       };
 
       if (!utime(file_path, &time)) {
@@ -453,11 +446,9 @@ void handle_setattr(int sock, snfs_setattr_args *args) {
   }
 
   // Make and send the reply.
-  snfs_rep reply = make_reply(SETATTR, .setattr_rep = {
-      .which = which_set
-  });
+  snfs_rep reply = make_reply(SETATTR, .setattr_rep = {.which = which_set});
 
-  debug("Setattr for %s. Set: %"PRIu64".\n", file_path, which_set);
+  debug("Setattr for %s. Set: %" PRIu64 ".\n", file_path, which_set);
   if (send_reply(sock, &reply, snfs_rep_size(setattr)) < 0) {
     print_err("Failed to send reply to setattr for %s.\n", file_path);
   }
