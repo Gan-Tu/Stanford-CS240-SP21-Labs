@@ -59,10 +59,17 @@ TEST_SRCS = test.c test_utils.c mock.c helpers.c \
 TEST_OBJS = $(TEST_SRCS:%.c=$(OBJ_DIR)/%.o)
 TEST_BIN = $(BIN_DIR)/test
 
+EXTRA_CREDIT_TEST_SRCS = extra_credit_test.c test_utils.c mock.c helpers.c \
+		extra_credit_create_file_tests.c \
+		extra_credit_delete_file_tests.c \
+		extra_credit_rename_file_tests.c
+EXTRA_CREDIT_TEST_OBJS = $(EXTRA_CREDIT_TEST_SRCS:%.c=$(OBJ_DIR)/%.o)
+EXTRA_CREDIT_TEST_BIN = $(BIN_DIR)/extra_credit_test
+
 SUBMIT_TAR = lab2.tar.gz
 SUBMISSION_SITE = "https://web.stanford.edu/class/cs240/labs/submission/"
 
-.PHONY: all clean test submission server client
+.PHONY: all clean test submission server client extra_credit_test
 
 vpath % $(SRC_DIR) $(TEST_DIR)
 
@@ -96,12 +103,20 @@ $(TEST_BIN): $(TEST_OBJS) $(SNFS_OBJS) $(SNFS_LIB_AS) | $(BIN_DIR)
 	@echo + $@ [ld $^]
 	@$(CC) -o $@ $^ $(LDFLAGS) $(CLIENT_LIB_FLAGS) $(SERVER_LIB_FLAGS)
 
+$(EXTRA_CREDIT_TEST_BIN): $(EXTRA_CREDIT_TEST_OBJS) $(SNFS_OBJS) $(SNFS_LIB_AS) | $(BIN_DIR)
+	@echo + $@ [ld $^]
+	@$(CC) -o $@ $^ $(LDFLAGS) $(CLIENT_LIB_FLAGS) $(SERVER_LIB_FLAGS)
+
 $(SUBMIT_TAR): $(call rwild,$(SRC_DIR)/,*) $(call rwild,$(INCLUDE_DIR)/,*) $(call rwild,$(TOP_TEST_DIR)/,*)
 	tar -zcf $@ $(SRC_DIR) $(INCLUDE_DIR) $(TOP_TEST_DIR)
 
 test: $(TEST_BIN)
 	@-sudo $(TEST_BIN)
 	@-sudo pkill test
+
+extra_credit_test: $(EXTRA_CREDIT_TEST_BIN)
+	@-sudo $(EXTRA_CREDIT_TEST_BIN)
+	@-sudo pkill extra_credit_test
 
 server: $(SERVER_BIN)
 

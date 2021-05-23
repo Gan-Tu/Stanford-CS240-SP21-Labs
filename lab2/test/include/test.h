@@ -196,5 +196,8 @@ void phase5_tests(bool *result, int *_num_tests, int *_num_passed);
 void phase6_tests(bool *result, int *_num_tests, int *_num_passed);
 void phase7_tests(bool *result, int *_num_tests, int *_num_passed);
 void unphased_tests(bool *result, int *_num_tests, int *_num_passed);
+void extra_credit_create_file_tests(bool *result, int *_num_tests, int *_num_passed);
+void extra_credit_delete_file_tests(bool *result, int *_num_tests, int *_num_passed);
+void extra_credit_rename_file_tests(bool *result, int *_num_tests, int *_num_passed);
 
 #endif
