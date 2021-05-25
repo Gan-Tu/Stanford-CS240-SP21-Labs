@@ -1,21 +1,20 @@
 /* #define DEBUG */
 #define FUSE_USE_VERSION 26
 
-#include <errno.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <getopt.h>
-#include <fuse.h>
-#include <fcntl.h>
 #include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <fuse.h>
+#include <getopt.h>
 #include <inttypes.h>
-
 #include <nanomsg/nn.h>
 #include <nanomsg/reqrep.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "common.h"
 #include "client.h"
+#include "common.h"
 
 // The name the program was invoked with.
 static const char *PROG_NAME;
@@ -28,14 +27,14 @@ static client_state *INIT_STATE;
  */
 static void usage() {
   fprintf(stderr,
-    "Usage: %s [OPTION]... <url> <dir>\n"
-    "  <url>  URL for the Simple NFS Server\n"
-    "  <dir>  mount point for remote directory\n"
-    "\nOptions:\n"
-    "  -d     start FUSE in debug mode\n"
-    "  -h     give this help message\n"
-    "  -v     print verbose output\n",
-    PROG_NAME);
+          "Usage: %s [OPTION]... <url> <dir>\n"
+          "  <url>  URL for the Simple NFS Server\n"
+          "  <dir>  mount point for remote directory\n"
+          "\nOptions:\n"
+          "  -d     start FUSE in debug mode\n"
+          "  -h     give this help message\n"
+          "  -v     print verbose output\n",
+          PROG_NAME);
 }
 
 /**
@@ -121,7 +120,8 @@ static void *snfs_init(struct fuse_conn_info *conn) {
 
   // Save it in the client's state
   INIT_STATE->root_fhandle = root;
-  verbose(INIT_STATE->options.verbose, "Mounted! Root handle is %"PRIu64"\n", root);
+  verbose(INIT_STATE->options.verbose, "Mounted! Root handle is %" PRIu64 "\n",
+          root);
   printf("Connected to server at '%s'.", INIT_STATE->server_url);
 
   // Return the pointer which can later be accessed using STATE
@@ -152,17 +152,23 @@ static void snfs_destroy(void *private_data) {
  * The fuse_operations structure containing the list of file system callbacks.
  */
 static struct fuse_operations snfs_client_oper = {
-  .getattr	= snfs_getattr,
-  .readdir	= snfs_readdir,
-  .open = snfs_open,
-  .read = snfs_read,
-  .write = snfs_write,
-  .truncate = snfs_truncate,
-  .chmod = snfs_chmod,
-  .chown = snfs_chown,
-  .utimens = snfs_utimens,
-  .init = snfs_init,
-  .destroy = snfs_destroy
+    .getattr = snfs_getattr,
+    .readdir = snfs_readdir,
+    .open = snfs_open,
+    .read = snfs_read,
+    .write = snfs_write,
+    .truncate = snfs_truncate,
+    .chmod = snfs_chmod,
+    .chown = snfs_chown,
+    .utimens = snfs_utimens,
+    .init = snfs_init,
+    // Extra Credit below
+    .destroy = snfs_destroy,
+    .create = snfs_create,
+    .unlink = snfs_unlink,
+    .rename = snfs_rename,
+    .mkdir = snfs_mkdir,
+    .rmdir = snfs_rmdir,
 };
 
 /**
@@ -211,8 +217,7 @@ int client_main(int argc, char *argv[]) {
   // Set up the fuse argc and argv
   int fargc = 5;
   const char *fargv[7] = {
-    PROG_NAME, dir_path, "-s", "-o", "default_permissions", NULL, NULL
-  };
+      PROG_NAME, dir_path, "-s", "-o", "default_permissions", NULL, NULL};
 
   // Enable FUSE's debug mode if requested.
   if (INIT_STATE->options.fuse_debug) {

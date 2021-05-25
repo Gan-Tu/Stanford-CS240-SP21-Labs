@@ -193,6 +193,22 @@ void serve_loop(const char *url) {
       case SETATTR:
         handle_setattr(sock, &req->content.setattr_args);
         break;
+      // Extra Credit
+      case CREATE:
+        handle_create(sock, &req->content.create_args);
+        break;
+      case UNLINK:
+        handle_unlink(sock, &req->content.unlink_args);
+        break;
+      case RENAME:
+        handle_rename(sock, &req->content.rename_args);
+        break;
+      case MKDIR:
+        handle_mkdir(sock, &req->content.mkdir_args);
+        break;
+      case RMDIR:
+        handle_rmdir(sock, &req->content.rmdir_args);
+        break;
       default:
         handle_unimplemented(sock, msg_type);
         break;

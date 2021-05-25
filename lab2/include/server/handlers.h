@@ -14,4 +14,11 @@ void handle_setattr(int sock, snfs_setattr_args *args);
 void handle_error(int sock, snfs_error error);
 void handle_unimplemented(int sock, snfs_msg_type msg_type);
 
+// Extra Credit
+void handle_create(int sock, snfs_create_args *args);
+void handle_unlink(int sock, snfs_unlink_args *args);
+void handle_rename(int sock, snfs_rename_args *args);
+void handle_mkdir(int sock, snfs_mkdir_args *args);
+void handle_rmdir(int sock, snfs_rmdir_args *args);
+
 #endif

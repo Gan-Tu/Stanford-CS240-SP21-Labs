@@ -500,3 +500,69 @@ int snfs_utimens(const char *path, const struct timespec tv[2]) {
           path, tv[0].tv_sec, tv[0].tv_nsec, tv[1].tv_sec, tv[1].tv_nsec);
   return snfs_setattr(path, SNFS_SETTIMES, 0, 0, 0, 0, tv);
 }
+
+/**
+ * Create and open a file
+ *
+ * If the file does not exist, first create it with the specified
+ * mode, and then open it.
+ *
+ * If this method is not implemented or under Linux kernel
+ * versions earlier than 2.6.15, the mknod() and open() methods
+ * will be called instead.
+ *
+ * Introduced in version 2.5
+ */
+int snfs_create(const char *path, mode_t mode, ffi *fi) {
+  UNUSED(path);
+  UNUSED(mode);
+  UNUSED(fi);
+
+  // FIXME
+
+  return -ENOENT;
+}
+
+/** Remove a file */
+int snfs_unlink(const char *path) {
+  UNUSED(path);
+
+  // FIXME
+
+  return -ENOENT;
+}
+
+
+/** Rename a file */
+int snfs_rename(const char *oldpath, const char *newpath) {
+  UNUSED(oldpath);
+  UNUSED(newpath);
+
+  // FIXME
+
+  return -ENOENT;
+}
+
+/** Create a directory
+ *
+ * Note that the mode argument may not have the type specification
+ * bits set, i.e. S_ISDIR(mode) can be false.  To obtain the
+ * correct directory type bits use  mode|S_IFDIR
+ * */
+int snfs_mkdir(const char *path, mode_t mode) {
+  UNUSED(path);
+  UNUSED(mode);
+
+  // FIXME
+
+  return -ENOENT;
+}
+
+/** Remove a directory */
+int snfs_rmdir(const char *path) {
+  UNUSED(path);
+
+  // FIXME
+
+  return -ENOENT;
+}

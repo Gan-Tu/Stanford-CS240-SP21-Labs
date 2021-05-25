@@ -411,7 +411,7 @@ void handle_read(int sock, snfs_read_args *args) {
     handle_error(sock, (errno == ENOENT) ? SNFS_ENOENT : SNFS_EINTERNAL);
     return free((void *)file_path);
   }
-  ssize_t file_size = (ssize_t) st.st_size;
+  ssize_t file_size = (ssize_t)st.st_size;
 
   // Try to open the file, and exit early if there's an issue.
   int fd = open(file_path, O_RDONLY);
@@ -455,7 +455,7 @@ void handle_read(int sock, snfs_read_args *args) {
 
   reply->type = READ;
   reply->content.read_rep.count = bytes_read;
-  reply->content.read_rep.eof = (bytes_read < (ssize_t) args->count);
+  reply->content.read_rep.eof = (bytes_read < (ssize_t)args->count);
   memcpy(reply->content.read_rep.data, buff, bytes_read);
 
   debug("Read for %" PRIu64 " done! Read %zd bytes.\n", args->file, bytes_read);
@@ -638,4 +638,74 @@ void handle_setattr(int sock, snfs_setattr_args *args) {
 void handle_unimplemented(int sock, snfs_msg_type msg_type) {
   printf("NOTE: Handler for '%s' is unimplemented.\n", strmsgtype(msg_type));
   handle_error(sock, SNFS_ENOTIMPL);
+}
+
+/**
+ * The CREATE handler.
+ *
+ * FIXME. ADD DOCUMENTATION
+ */
+void handle_create(int sock, snfs_create_args *args) {
+  UNUSED(args);
+
+  debug("Handling create");
+
+  // FIXME.
+  handle_unimplemented(sock, CREATE);
+}
+
+/**
+ * The UNLINK handler.
+ *
+ * FIXME. ADD DOCUMENTATION
+ */
+void handle_unlink(int sock, snfs_unlink_args *args) {
+  UNUSED(args);
+
+  debug("Handling unlink");
+
+  // FIXME.
+  handle_unimplemented(sock, UNLINK);
+}
+
+/**
+ * The RENAME handler.
+ *
+ * FIXME. ADD DOCUMENTATION
+ */
+void handle_rename(int sock, snfs_rename_args *args) {
+  UNUSED(args);
+
+  debug("Handling rename");
+
+  // FIXME.
+  handle_unimplemented(sock, RENAME);
+}
+
+/**
+ * The MKDIR handler.
+ *
+ * FIXME. ADD DOCUMENTATION
+ */
+void handle_mkdir(int sock, snfs_mkdir_args *args) {
+  UNUSED(args);
+
+  debug("Handlingmkdir ");
+
+  // FIXME.
+  handle_unimplemented(sock, MKDIR);
+}
+
+/**
+ * The RMDIR handler.
+ *
+ * FIXME. ADD DOCUMENTATION
+ */
+void handle_rmdir(int sock, snfs_rmdir_args *args) {
+  UNUSED(args);
+
+  debug("Handlingrmdir ");
+
+  // FIXME.
+  handle_unimplemented(sock, RMDIR);
 }
