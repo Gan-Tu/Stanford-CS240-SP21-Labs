@@ -688,12 +688,34 @@ void handle_rename(int sock, snfs_rename_args *args) {
  * FIXME. ADD DOCUMENTATION
  */
 void handle_mkdir(int sock, snfs_mkdir_args *args) {
-  UNUSED(args);
+  char *dir_path = (char *)args->dirname;
+  int fd = mkdir(dir_path, (mode_t)args->mode);
+  if (fd < 0) {
+    debug("Failed to mkdir file: %s\n", dir_path);
+    if (errno == ENOENT) {
+      return handle_error(sock, SNFS_ENOENT);
+    } else if (errno == EACCES) {
+      return handle_error(sock, SNFS_EACCES);
+    } else {
+      return handle_error(sock, SNFS_EINTERNAL);
+    }
+  }
 
-  debug("Handlingmkdir ");
+  fhandle handle = name_find_or_insert(dir_path);
+  snfs_rep reply = make_reply(MKDIR, .mkdir_rep = {.handle = handle});
+
+  // Send off the message
+  debug("Created '%s', sending handle %" PRIu64 "\n", dir_path, handle);
+  if (send_reply(sock, &reply, snfs_rep_size(mkdir)) < 0) {
+    print_err("Failed to send reply to mkdir for %s.\n", dir_path);
+  }
+
+  return;
+
+  // debug("Handling mkdir");
 
   // FIXME.
-  handle_unimplemented(sock, MKDIR);
+  // handle_unimplemented(sock, MKDIR);
 }
 
 /**
@@ -704,7 +726,7 @@ void handle_mkdir(int sock, snfs_mkdir_args *args) {
 void handle_rmdir(int sock, snfs_rmdir_args *args) {
   UNUSED(args);
 
-  debug("Handlingrmdir ");
+  debug("Handling rmdir");
 
   // FIXME.
   handle_unimplemented(sock, RMDIR);

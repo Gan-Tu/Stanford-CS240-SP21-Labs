@@ -165,9 +165,11 @@ static struct fuse_operations snfs_client_oper = {
     // Extra Credit below
     .destroy = snfs_destroy,
     .create = snfs_create,
-    .remove = snfs_remove,
+    .unlink = snfs_unlink,
     .rename = snfs_rename,
+    .opendir = snfs_opendir,
     .mkdir = snfs_mkdir,
+    .releasedir = snfs_releasedir,
     .rmdir = snfs_rmdir,
 };
 

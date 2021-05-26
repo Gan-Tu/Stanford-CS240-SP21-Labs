@@ -51,23 +51,26 @@ typedef struct snfs_setattr_args_struct {
 
 // Extra Credit
 typedef struct snfs_create_args_struct {
-  /* FIXME. */
+  uint8_t filename[SNFS_MAX_FILENAME_BUF];  // Name of the file.
+  uint8_t mode;                             // File mode.
 } snfs_create_args;
 
 typedef struct snfs_remove_args_struct {
-  /* FIXME. */
+  fhandle fh;  // The file Handle to remove
 } snfs_remove_args;
 
 typedef struct snfs_rename_args_struct {
-  /* FIXME. */
+  fhandle fh;                             // Handle of the file to rename
+  uint8_t filename[SNFS_MAX_FILENAME_BUF];  // New name of the file.
 } snfs_rename_args;
 
 typedef struct snfs_mkdir_args_struct {
-  /* FIXME. */
+  uint8_t dirname[SNFS_MAX_FILENAME_BUF];  // Name of the directory.
+  uint8_t mode;                            // Directory mode.
 } snfs_mkdir_args;
 
 typedef struct snfs_rmdir_args_struct {
-  /* FIXME. */
+  fhandle dir;  // Handle of directory to remove.
 } snfs_rmdir_args;
 
 typedef struct packed snfs_req_struct {

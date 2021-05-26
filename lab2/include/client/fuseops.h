@@ -33,8 +33,11 @@ int snfs_setattr(const char *path, uint64_t which, off_t size, mode_t mode,
 int snfs_create(const char *path, mode_t mode, ffi *fi);
 int snfs_unlink(const char *path);
 int snfs_rename(const char *oldpath, const char *newpath);
+int snfs_release(const char *path, ffi *fi);
 
+int snfs_opendir(const char *path, ffi *fi);
 int snfs_mkdir(const char *path, mode_t mode);
+int snfs_releasedir(const char *path, ffi *fi);
 int snfs_rmdir(const char *path);
 
 #endif

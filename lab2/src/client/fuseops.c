@@ -502,33 +502,45 @@ int snfs_utimens(const char *path, const struct timespec tv[2]) {
 }
 
 /**
- * Create and open a file
+ * The FUSE create callback
  *
- * If the file does not exist, first create it with the specified
- * mode, and then open it.
- *
- * If this method is not implemented or under Linux kernel
- * versions earlier than 2.6.15, the mknod() and open() methods
- * will be called instead.
- *
- * Introduced in version 2.5
+ * Create and open a file. If the file does not exist, first create it with the
+ * specified mode, and then open it.
  */
 int snfs_create(const char *path, mode_t mode, ffi *fi) {
-  UNUSED(path);
-  UNUSED(mode);
-  UNUSED(fi);
+  verbose(STATE->options.verbose, "Creating file %s.\n", path);
 
-  // FIXME
+  if (!strcmp(path, "/")) {
+    print_err("Cannot create a file that is the mounted root handle");
+    return -ENOENT;
+  }
 
-  return -ENOENT;
+  // Prepare create request and reply object
+  snfs_req request = make_request(CREATE, /* fill in later */);
+  snfs_create_args *args = &request.content.create_args;
+  args->mode = (uint8_t)mode;
+  memset(args->filename, '\0', sizeof(uint8_t) * SNFS_MAX_FILENAME_BUF);
+  memcpy(args->filename, (uint8_t *)path,
+         sizeof(uint8_t) * SNFS_MAX_FILENAME_LENGTH);
+
+  snfs_rep *reply;
+  reply = send_request(&request, snfs_req_size(create));
+  if (!reply) {
+    return -ENOENT;
+  }
+
+  fi->fh = reply->content.create_rep.handle;
+
+  nn_freemsg(reply);
+  return 0;
 }
 
 /**
- * The FUSE remove callback
+ * The FUSE unlink callback
  *
  * Remove a file
  */
-int snfs_remove(const char *path) {
+int snfs_unlink(const char *path) {
   UNUSED(path);
 
   // FIXME
@@ -550,23 +562,88 @@ int snfs_rename(const char *oldpath, const char *newpath) {
   return -ENOENT;
 }
 
-/** Create a directory
+/**
+ * The FUSE release callback
+ *
+ * Release is called when there are no more references to an open
+ * file: all file descriptors are closed and all memory mappings
+ * are unmapped.
+ *
+ * For every open() call there will be exactly one release() call
+ * with the same flags and file descriptor.	 It is possible to
+ * have a file opened more than once, in which case only the last
+ * release will mean, that no more reads/writes will happen on the
+ * file.  The return value of release is ignored.
+ */
+int snfs_release(const char *path, ffi *fi) {
+  UNUSED(path);
+  UNUSED(fi);
+
+  return 0;
+}
+
+/**
+ * The FUSE opendir callback
+ *
+ * Unless the 'default_permissions' mount option is given,
+ * this method should check if opendir is permitted for this
+ * directory. Optionally opendir may also return an arbitrary
+ * filehandle in the fuse_file_info structure, which will be
+ * passed to readdir, releasedir and fsyncdir.
+ */
+int snfs_opendir(const char *path, ffi *fi) {
+  fhandle handle;
+  if (!lookup(path, &handle)) {
+    return -ENOENT;
+  }
+  fi->fh = handle;
+
+  return 0;
+}
+
+/**
+ * The FUSE mkdir callback
  *
  * Note that the mode argument may not have the type specification
  * bits set, i.e. S_ISDIR(mode) can be false.  To obtain the
  * correct directory type bits use  mode|S_IFDIR
- *
- * The FUSE mkdir callback
- *
- *
  */
 int snfs_mkdir(const char *path, mode_t mode) {
+  verbose(STATE->options.verbose, "Creating file %s.\n", path);
+
+  if (!strcmp(path, "/")) {
+    print_err("Cannot mkdir a directory that is the mounted root handle");
+    return -ENOENT;
+  }
+
+  // Prepare mkdir request and reply object
+  snfs_req request = make_request(MKDIR, /* fill in later */);
+  snfs_mkdir_args *args = &request.content.mkdir_args;
+  args->mode = (uint8_t)mode | S_IFDIR;
+  memset(args->dirname, '\0', sizeof(uint8_t) * SNFS_MAX_FILENAME_BUF);
+  memcpy(args->dirname, (uint8_t *)path,
+         sizeof(uint8_t) * SNFS_MAX_FILENAME_LENGTH);
+
+  snfs_rep *reply;
+  reply = send_request(&request, snfs_req_size(mkdir));
+  if (!reply) {
+    return -ENOENT;
+  }
+
+  nn_freemsg(reply);
+  return 0;
+}
+
+/**
+ * The FUSE releasedir callback
+ *
+ * Release a directory
+ */
+int snfs_releasedir(const char *path, ffi *fi) {
   UNUSED(path);
-  UNUSED(mode);
+  UNUSED(fi);
 
-  // FIXME
-
-  return -ENOENT;
+  return 0;
 }
 
 /**
