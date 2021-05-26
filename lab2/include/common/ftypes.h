@@ -74,7 +74,7 @@ typedef enum packed snfs_msg_type_enum {
   SETATTR,
   // Extra Credit
   CREATE,
-  UNLINK,
+  REMOVE,
   RENAME,
   MKDIR,
   RMDIR,

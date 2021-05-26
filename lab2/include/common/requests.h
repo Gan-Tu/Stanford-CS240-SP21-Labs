@@ -54,9 +54,9 @@ typedef struct snfs_create_args_struct {
   /* FIXME. */
 } snfs_create_args;
 
-typedef struct snfs_unlink_args_struct {
+typedef struct snfs_remove_args_struct {
   /* FIXME. */
-} snfs_unlink_args;
+} snfs_remove_args;
 
 typedef struct snfs_rename_args_struct {
   /* FIXME. */
@@ -81,7 +81,7 @@ typedef struct packed snfs_req_struct {
     snfs_setattr_args setattr_args;
     // Extra Credit
     snfs_create_args create_args;
-    snfs_unlink_args unlink_args;
+    snfs_remove_args remove_args;
     snfs_rename_args rename_args;
     snfs_mkdir_args mkdir_args;
     snfs_rmdir_args rmdir_args;

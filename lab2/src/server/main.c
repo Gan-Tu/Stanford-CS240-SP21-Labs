@@ -197,8 +197,8 @@ void serve_loop(const char *url) {
       case CREATE:
         handle_create(sock, &req->content.create_args);
         break;
-      case UNLINK:
-        handle_unlink(sock, &req->content.unlink_args);
+      case REMOVE:
+        handle_remove(sock, &req->content.remove_args);
         break;
       case RENAME:
         handle_rename(sock, &req->content.rename_args);

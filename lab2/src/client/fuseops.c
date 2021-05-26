@@ -523,8 +523,12 @@ int snfs_create(const char *path, mode_t mode, ffi *fi) {
   return -ENOENT;
 }
 
-/** Remove a file */
-int snfs_unlink(const char *path) {
+/**
+ * The FUSE remove callback
+ *
+ * Remove a file
+ */
+int snfs_remove(const char *path) {
   UNUSED(path);
 
   // FIXME
@@ -532,8 +536,11 @@ int snfs_unlink(const char *path) {
   return -ENOENT;
 }
 
-
-/** Rename a file */
+/**
+ * The FUSE rename callback
+ *
+ * Rename a file
+ */
 int snfs_rename(const char *oldpath, const char *newpath) {
   UNUSED(oldpath);
   UNUSED(newpath);
@@ -548,7 +555,11 @@ int snfs_rename(const char *oldpath, const char *newpath) {
  * Note that the mode argument may not have the type specification
  * bits set, i.e. S_ISDIR(mode) can be false.  To obtain the
  * correct directory type bits use  mode|S_IFDIR
- * */
+ *
+ * The FUSE mkdir callback
+ *
+ *
+ */
 int snfs_mkdir(const char *path, mode_t mode) {
   UNUSED(path);
   UNUSED(mode);
@@ -558,7 +569,11 @@ int snfs_mkdir(const char *path, mode_t mode) {
   return -ENOENT;
 }
 
-/** Remove a directory */
+/**
+ * The FUSE rmdir callback
+ *
+ * Remove a directory
+ */
 int snfs_rmdir(const char *path) {
   UNUSED(path);
 

@@ -655,17 +655,17 @@ void handle_create(int sock, snfs_create_args *args) {
 }
 
 /**
- * The UNLINK handler.
+ * The remove handler.
  *
  * FIXME. ADD DOCUMENTATION
  */
-void handle_unlink(int sock, snfs_unlink_args *args) {
+void handle_remove(int sock, snfs_remove_args *args) {
   UNUSED(args);
 
-  debug("Handling unlink");
+  debug("Handling remove");
 
   // FIXME.
-  handle_unimplemented(sock, UNLINK);
+  handle_unimplemented(sock, REMOVE);
 }
 
 /**
