@@ -77,7 +77,6 @@ typedef enum packed snfs_msg_type_enum {
   REMOVE,
   RENAME,
   MKDIR,
-  RMDIR,
   ERROR,
   PAD_MSG_TYPE_ENUM = INT_MAX
 } snfs_msg_type;

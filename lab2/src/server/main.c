@@ -206,9 +206,6 @@ void serve_loop(const char *url) {
       case MKDIR:
         handle_mkdir(sock, &req->content.mkdir_args);
         break;
-      case RMDIR:
-        handle_rmdir(sock, &req->content.rmdir_args);
-        break;
       default:
         handle_unimplemented(sock, msg_type);
         break;

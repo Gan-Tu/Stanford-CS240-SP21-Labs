@@ -541,11 +541,21 @@ int snfs_create(const char *path, mode_t mode, ffi *fi) {
  * Remove a file
  */
 int snfs_unlink(const char *path) {
-  UNUSED(path);
+  assert(path);
 
-  // FIXME
+  fhandle handle;
+  if (!lookup(path, &handle)) {
+    return -ENOENT;
+  }
+  snfs_req request =
+      make_request(REMOVE, .remove_args = {.fh = handle, .is_dir = 0});
+  snfs_rep *reply = send_request(&request, snfs_req_size(remove));
+  if (!reply) {
+    return -ENOENT;
+  }
 
-  return -ENOENT;
+  nn_freemsg(reply);
+  return 0;
 }
 
 /**
@@ -652,9 +662,19 @@ int snfs_releasedir(const char *path, ffi *fi) {
  * Remove a directory
  */
 int snfs_rmdir(const char *path) {
-  UNUSED(path);
+  assert(path);
 
-  // FIXME
+  fhandle handle;
+  if (!lookup(path, &handle)) {
+    return -ENOENT;
+  }
+  snfs_req request =
+      make_request(REMOVE, .remove_args = {.fh = handle, .is_dir = 1});
+  snfs_rep *reply = send_request(&request, snfs_req_size(remove));
+  if (!reply) {
+    return -ENOENT;
+  }
 
-  return -ENOENT;
+  nn_freemsg(reply);
+  return 0;
 }

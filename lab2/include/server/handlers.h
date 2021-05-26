@@ -19,6 +19,5 @@ void handle_create(int sock, snfs_create_args *args);
 void handle_remove(int sock, snfs_remove_args *args);
 void handle_rename(int sock, snfs_rename_args *args);
 void handle_mkdir(int sock, snfs_mkdir_args *args);
-void handle_rmdir(int sock, snfs_rmdir_args *args);
 
 #endif

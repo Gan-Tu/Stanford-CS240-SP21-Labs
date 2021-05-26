@@ -56,11 +56,12 @@ typedef struct snfs_create_args_struct {
 } snfs_create_args;
 
 typedef struct snfs_remove_args_struct {
-  fhandle fh;  // The file Handle to remove
+  fhandle fh;      // The file handle to remove
+  uint8_t is_dir;  // Whether the file handle is a directory
 } snfs_remove_args;
 
 typedef struct snfs_rename_args_struct {
-  fhandle fh;                             // Handle of the file to rename
+  fhandle fh;                               // Handle of the file to rename
   uint8_t filename[SNFS_MAX_FILENAME_BUF];  // New name of the file.
 } snfs_rename_args;
 
@@ -68,10 +69,6 @@ typedef struct snfs_mkdir_args_struct {
   uint8_t dirname[SNFS_MAX_FILENAME_BUF];  // Name of the directory.
   uint8_t mode;                            // Directory mode.
 } snfs_mkdir_args;
-
-typedef struct snfs_rmdir_args_struct {
-  fhandle dir;  // Handle of directory to remove.
-} snfs_rmdir_args;
 
 typedef struct packed snfs_req_struct {
   snfs_msg_type type;
@@ -87,7 +84,6 @@ typedef struct packed snfs_req_struct {
     snfs_remove_args remove_args;
     snfs_rename_args rename_args;
     snfs_mkdir_args mkdir_args;
-    snfs_rmdir_args rmdir_args;
   } content;
 } snfs_req;
 

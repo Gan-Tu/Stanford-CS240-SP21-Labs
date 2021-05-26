@@ -23,7 +23,7 @@ int snfs_write(const char *, const char *, size_t, off_t, ffi *);
 int snfs_readdir(const char *, void *, ffdt, off_t, ffi *);
 int snfs_truncate(const char *, off_t);
 int snfs_chmod(const char *path, mode_t mode);
-int snfs_chown(const char *path, uid_t uid, gid_t gid);
+int snfs_chown(const char *patmkdirh, uid_t uid, gid_t gid);
 int snfs_utimens(const char *path, const struct timespec tv[2]);
 int snfs_setattr(const char *path, uint64_t which, off_t size, mode_t mode,
                  gid_t uid, uid_t gid, const struct timespec tv[2]);
