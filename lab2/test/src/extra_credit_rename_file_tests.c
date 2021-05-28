@@ -15,7 +15,7 @@
 #include "server.h"
 #include "test.h"
 
-// TODO(tugan): add tests
+static const int MAX_BYTES = 1024;
 
 static void server_cleanup() {
   stop_server(true);
@@ -28,7 +28,7 @@ static bool test_rename() {
   check(setup_client());
 
   struct fuse_file_info fi;
-  fi.fh = 1;     
+  fi.fh = 1;
 
   // As always, we start with nonexisting files
   char rand_string[SNFS_MAX_FILENAME_BUF];
@@ -47,7 +47,7 @@ static bool test_rename() {
     // Cannot open both files, initially
     check_eq(snfs_open(rand_string, &fi), -ENOENT);
     check_eq(snfs_open(rand_string_new_name, &fi), -ENOENT);
-    
+
     // Create a file
     create_file_at_path(rand_string);
 
@@ -67,6 +67,52 @@ static bool test_rename() {
 
     check(!lookup(rand_string, &handle));
     check(lookup(rand_string_new_name, &handle));
+  }
+
+  // Clean up
+  check(stop_server(true));
+  check(teardown_client());
+  return true;
+}
+
+static bool test_rename_with_content() {
+  // Make sure we can create and remove a database.
+  check(start_server(true));
+  check(setup_client());
+
+  char *written;
+  char readbuf[MAX_BYTES];
+
+  struct fuse_file_info fi;
+  fi.fh = 1;
+
+  // As always, we start with nonexisting files
+  char rand_string[SNFS_MAX_FILENAME_BUF];
+  char rand_string_new_name[SNFS_MAX_FILENAME_BUF];
+
+  for (int i = 0; i < 100; ++i) {
+    gen_random_filename(rand_string, SNFS_MAX_FILENAME_LENGTH - 64);
+    gen_random_filename(rand_string_new_name, SNFS_MAX_FILENAME_LENGTH - 64);
+
+    // If in rare chance, the random string is the same, skip this test
+    if (!strcmp(rand_string, rand_string_new_name)) {
+      continue;
+    }
+
+    // Create a file and write something
+    create_file_at_path(rand_string);
+    off_t size = write_rand_to(rand_string, MAX_BYTES, &written);
+
+    // Rename the file
+    check(!snfs_rename(rand_string, rand_string_new_name));
+
+    // The specified file content is in the new file
+    check(!snfs_open(rand_string_new_name, &fi));
+    check(fi.fh > 0);
+    check_eq(snfs_read(rand_string_new_name, readbuf, size, 0, &fi), size);
+    check(!memcmp(readbuf, written, size));
+
+    free(written);
   }
 
   // Clean up
@@ -99,4 +145,5 @@ BEGIN_TEST_SUITE(extra_credit_rename_file_tests) {
 
   // Run the tests
   clean_run_test(test_rename, server_cleanup);
+  clean_run_test(test_rename_with_content, server_cleanup);
 }
