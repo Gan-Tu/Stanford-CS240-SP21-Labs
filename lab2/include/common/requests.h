@@ -52,7 +52,7 @@ typedef struct snfs_setattr_args_struct {
 // Extra Credit
 typedef struct snfs_create_args_struct {
   uint8_t filename[SNFS_MAX_FILENAME_BUF];  // Name of the file.
-  uint8_t mode;                             // File mode.
+  mode_t mode;                             // File mode.
 } snfs_create_args;
 
 typedef struct snfs_remove_args_struct {
@@ -67,7 +67,7 @@ typedef struct snfs_rename_args_struct {
 
 typedef struct snfs_mkdir_args_struct {
   uint8_t dirname[SNFS_MAX_FILENAME_BUF];  // Name of the directory.
-  uint8_t mode;                            // Directory mode.
+  mode_t mode;                            // Directory mode.
 } snfs_mkdir_args;
 
 typedef struct packed snfs_req_struct {

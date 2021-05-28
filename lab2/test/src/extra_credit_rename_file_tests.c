@@ -22,15 +22,49 @@ static void server_cleanup() {
   teardown_client();
 }
 
-static bool test_noop() {
-  // setup client sends two NOOPS
+static bool test_rename() {
+  // Make sure we can create and remove a database.
   check(start_server(true));
-  // will call err_exit (failing the test) if server doesn't reply to NOOPs
-  setup_client();
+  check(setup_client());
 
-  // Okay, done
-  check(teardown_client());
+  struct fuse_file_info fi;
+  fi.fh = 1;     
+
+  // As always, we start with nonexisting files
+  char rand_string[SNFS_MAX_FILENAME_BUF];
+  char rand_string_new_name[SNFS_MAX_FILENAME_BUF];
+  
+  for (int i = 0; i < 100; ++i) {
+    gen_random_filename(rand_string, SNFS_MAX_FILENAME_LENGTH - 64);
+    gen_random_filename(rand_string_new_name, SNFS_MAX_FILENAME_LENGTH - 64);
+
+    // If in rare chance, the random string is the same, skip this test
+    if (!strcmp(rand_string, rand_string_new_name)) {
+      continue;
+    }
+
+    // Cannot open both files, initially
+    check_eq(snfs_open(rand_string, &fi), -ENOENT);
+    check_eq(snfs_open(rand_string_new_name, &fi), -ENOENT);
+    
+    // Create a file
+    create_file_at_path(rand_string);
+
+    // The specified file is created
+    check(!snfs_open(rand_string, &fi));
+    check_eq(snfs_open(rand_string_new_name, &fi), -ENOENT);
+
+    // Rename the file
+    check(!snfs_rename(rand_string, rand_string_new_name));
+
+    // The file is now a different name
+    check(!snfs_open(rand_string_new_name, &fi));
+    check_eq(snfs_open(rand_string, &fi), -ENOENT);
+  }
+
+  // Clean up
   check(stop_server(true));
+  check(teardown_client());
   return true;
 }
 
@@ -57,5 +91,5 @@ BEGIN_TEST_SUITE(extra_credit_rename_file_tests) {
   srand(current_ms());
 
   // Run the tests
-  clean_run_test(test_noop, server_cleanup);
+  clean_run_test(test_rename, server_cleanup);
 }

@@ -518,7 +518,7 @@ int snfs_create(const char *path, mode_t mode, ffi *fi) {
   // Prepare create request and reply object
   snfs_req request = make_request(CREATE, /* fill in later */);
   snfs_create_args *args = &request.content.create_args;
-  args->mode = (uint8_t)mode;
+  args->mode = (mode_t)mode;
   memset(args->filename, '\0', sizeof(uint8_t) * SNFS_MAX_FILENAME_BUF);
   memcpy(args->filename, (uint8_t *)path,
          sizeof(uint8_t) * SNFS_MAX_FILENAME_LENGTH);
@@ -647,7 +647,7 @@ int snfs_mkdir(const char *path, mode_t mode) {
   // Prepare mkdir request and reply object
   snfs_req request = make_request(MKDIR, /* fill in later */);
   snfs_mkdir_args *args = &request.content.mkdir_args;
-  args->mode = (uint8_t)mode | S_IFDIR;
+  args->mode = (mode_t)mode | S_IFDIR;
   memset(args->dirname, '\0', sizeof(uint8_t) * SNFS_MAX_FILENAME_BUF);
   memcpy(args->dirname, (uint8_t *)path,
          sizeof(uint8_t) * SNFS_MAX_FILENAME_LENGTH);
