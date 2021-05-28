@@ -33,7 +33,8 @@ static bool test_rename() {
   // As always, we start with nonexisting files
   char rand_string[SNFS_MAX_FILENAME_BUF];
   char rand_string_new_name[SNFS_MAX_FILENAME_BUF];
-  
+
+  fhandle handle;
   for (int i = 0; i < 100; ++i) {
     gen_random_filename(rand_string, SNFS_MAX_FILENAME_LENGTH - 64);
     gen_random_filename(rand_string_new_name, SNFS_MAX_FILENAME_LENGTH - 64);
@@ -54,12 +55,18 @@ static bool test_rename() {
     check(!snfs_open(rand_string, &fi));
     check_eq(snfs_open(rand_string_new_name, &fi), -ENOENT);
 
+    check(lookup(rand_string, &handle));
+    check(!lookup(rand_string_new_name, &handle));
+
     // Rename the file
     check(!snfs_rename(rand_string, rand_string_new_name));
 
     // The file is now a different name
     check(!snfs_open(rand_string_new_name, &fi));
     check_eq(snfs_open(rand_string, &fi), -ENOENT);
+
+    check(!lookup(rand_string, &handle));
+    check(lookup(rand_string_new_name, &handle));
   }
 
   // Clean up

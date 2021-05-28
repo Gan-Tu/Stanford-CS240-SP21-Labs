@@ -42,6 +42,7 @@ static bool test_create() {
   }
 
   // Now check that things that exist get opened correctly
+  fhandle handle;
   for (int i = 0; i < 100; ++i) {
     // Create the file
     gen_random_filename(rand_string, SNFS_MAX_FILENAME_LENGTH - 64);
@@ -51,6 +52,10 @@ static bool test_create() {
     check(!snfs_open(rand_string, &fi1));
     check(fi1.fh > 0);
     check_neq(fi1.fh, fi2.fh);
+
+    // Handles can be looked up
+    check(lookup(rand_string, &handle));
+    check_eq(fi1.fh, handle);
 
     // Recreate the same file returns same file handle
     check(!snfs_create(rand_string, S_IRWXU, &fi2));

@@ -38,6 +38,7 @@ static bool test_delete() {
   }
 
   // Create some files, then delete them
+  fhandle handle;
   for (int i = 0; i < 100; ++i) {
     // Create a file
     gen_random_filename(rand_string, SNFS_MAX_FILENAME_LENGTH - 64);
@@ -49,6 +50,9 @@ static bool test_delete() {
 
     // Delete the file
     check(!snfs_unlink(rand_string));
+    
+    // Handles cannot be looked up
+    check(!lookup(rand_string, &handle));
 
     // Open failed
     check_eq(snfs_open(rand_string, &fi), -ENOENT);
