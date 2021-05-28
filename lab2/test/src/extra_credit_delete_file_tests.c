@@ -15,8 +15,6 @@
 #include "server.h"
 #include "test.h"
 
-// TODO(tugan): add tests
-
 static void server_cleanup() {
   stop_server(true);
   teardown_client();
@@ -28,7 +26,7 @@ static bool test_delete() {
   check(setup_client());
 
   struct fuse_file_info fi;
-  fi.fh = 1;      
+  fi.fh = 1;
 
   // As always, we start with nonexisting files
   char rand_string[SNFS_MAX_FILENAME_BUF];
@@ -50,7 +48,7 @@ static bool test_delete() {
 
     // Delete the file
     check(!snfs_unlink(rand_string));
-    
+
     // Handles cannot be looked up
     check(!lookup(rand_string, &handle));
 

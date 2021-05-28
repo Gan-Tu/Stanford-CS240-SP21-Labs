@@ -15,8 +15,6 @@
 #include "server.h"
 #include "test.h"
 
-// TODO(tugan): add tests
-
 static void server_cleanup() {
   stop_server(true);
   teardown_client();
