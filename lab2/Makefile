@@ -108,7 +108,7 @@ $(EXTRA_CREDIT_TEST_BIN): $(EXTRA_CREDIT_TEST_OBJS) $(SNFS_OBJS) $(SNFS_LIB_AS) 
 	@$(CC) -o $@ $^ $(LDFLAGS) $(CLIENT_LIB_FLAGS) $(SERVER_LIB_FLAGS)
 
 $(SUBMIT_TAR): $(call rwild,$(SRC_DIR)/,*) $(call rwild,$(INCLUDE_DIR)/,*) $(call rwild,$(TOP_TEST_DIR)/,*)
-	tar -zcf $@ $(SRC_DIR) $(INCLUDE_DIR) $(TOP_TEST_DIR)
+	tar -zcf $@ $(SRC_DIR) $(INCLUDE_DIR) $(TOP_TEST_DIR) Makefile
 
 test: $(TEST_BIN)
 	@-sudo $(TEST_BIN)
