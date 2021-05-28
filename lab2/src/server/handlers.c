@@ -768,17 +768,19 @@ void handle_rename(int sock, snfs_rename_args *args) {
   if (rename(old_path, new_path)) {
     debug("Failed to rename file: %s\n", old_path);
     if (errno == ENOENT) {
-      return handle_error(sock, SNFS_ENOENT);
+      handle_error(sock, SNFS_ENOENT);
     } else if (errno == EACCES) {
-      return handle_error(sock, SNFS_EACCES);
+      handle_error(sock, SNFS_EACCES);
     } else {
-      return handle_error(sock, SNFS_EINTERNAL);
+      handle_error(sock, SNFS_EINTERNAL);
     }
+    return free((void*) old_path);
   }
 
   fhandle handle = name_find_or_insert(new_path);
   if (!name_remove(old_path)) {
-    return handle_error(sock, SNFS_EINTERNAL);
+    handle_error(sock, SNFS_EINTERNAL);
+    return free((void*) old_path);
   }
   snfs_rep reply = make_reply(RENAME, .rename_rep = {.handle = handle});
 
@@ -787,6 +789,8 @@ void handle_rename(int sock, snfs_rename_args *args) {
   if (send_reply(sock, &reply, snfs_rep_size(rename)) < 0) {
     print_err("Failed to send reply to rename for %s.\n", old_path);
   }
+
+  free((void*) old_path);
 }
 
 /**
