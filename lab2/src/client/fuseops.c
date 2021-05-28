@@ -564,12 +564,30 @@ int snfs_unlink(const char *path) {
  * Rename a file
  */
 int snfs_rename(const char *oldpath, const char *newpath) {
-  UNUSED(oldpath);
-  UNUSED(newpath);
+  verbose(STATE->options.verbose, "Renaming file from  %s to %s.\n", oldpath,
+          newpath);
+  fhandle handle;
+  if (!lookup(oldpath, &handle)) {
+    return -ENOENT;
+  }
 
-  // FIXME
+  // Prepare rename request and reply object
+  snfs_req request = make_request(RENAME, /* fill in later */);
+  snfs_rename_args *args = &request.content.rename_args;
+  args->fh = handle;
 
-  return -ENOENT;
+  memset(args->filename, '\0', sizeof(uint8_t) * SNFS_MAX_FILENAME_BUF);
+  memcpy(args->filename, (uint8_t *)newpath,
+         sizeof(uint8_t) * SNFS_MAX_FILENAME_LENGTH);
+
+  snfs_rep *reply;
+  reply = send_request(&request, snfs_req_size(rename));
+  if (!reply) {
+    return -ENOENT;
+  }
+
+  nn_freemsg(reply);
+  return 0;
 }
 
 /**
@@ -619,7 +637,7 @@ int snfs_opendir(const char *path, ffi *fi) {
  * correct directory type bits use  mode|S_IFDIR
  */
 int snfs_mkdir(const char *path, mode_t mode) {
-  verbose(STATE->options.verbose, "Creating file %s.\n", path);
+  verbose(STATE->options.verbose, "Creating directory %s.\n", path);
 
   if (!strcmp(path, "/")) {
     print_err("Cannot mkdir a directory that is the mounted root handle");

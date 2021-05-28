@@ -49,7 +49,7 @@ typedef struct snfs_remove_rep_struct {
 } snfs_remove_rep;
 
 typedef struct snfs_rename_rep_struct {
-  /* No reply. */
+  fhandle handle;  // Handle for the new file that was created.
 } snfs_rename_rep;
 
 typedef struct snfs_mkdir_rep_struct {

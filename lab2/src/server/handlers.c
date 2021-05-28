@@ -704,7 +704,7 @@ void handle_remove(int sock, snfs_remove_args *args) {
       return free((void *)path);
     }
 
-    if (!rmdir(path)) {
+    if (rmdir(path)) {
       debug("Failed to rmdir: %s\n", path);
       if (errno == ENOENT) {
         handle_error(sock, SNFS_ENOENT);
@@ -719,7 +719,7 @@ void handle_remove(int sock, snfs_remove_args *args) {
     }
   } else {
     // Make sure the handle is not a directory
-    if (!unlink(path)) {
+    if (unlink(path)) {
       debug("Failed to unlink file: %s\n", path);
       if (errno == ENOENT) {
         handle_error(sock, SNFS_ENOENT);
@@ -757,12 +757,36 @@ void handle_remove(int sock, snfs_remove_args *args) {
  * FIXME. ADD DOCUMENTATION
  */
 void handle_rename(int sock, snfs_rename_args *args) {
-  UNUSED(args);
+  // Get the path from the fhandle
+  const char *old_path = get_file(args->fh);
+  if (!old_path) {
+    debug("Did not find path for rename: %" PRIu64 "\n", args->fh);
+    return handle_error(sock, SNFS_ENOENT);
+  }
 
-  debug("Handling rename");
+  char *new_path = (char *)args->filename;
+  if (rename(old_path, new_path)) {
+    debug("Failed to rename file: %s\n", old_path);
+    if (errno == ENOENT) {
+      return handle_error(sock, SNFS_ENOENT);
+    } else if (errno == EACCES) {
+      return handle_error(sock, SNFS_EACCES);
+    } else {
+      return handle_error(sock, SNFS_EINTERNAL);
+    }
+  }
 
-  // FIXME.
-  handle_unimplemented(sock, RENAME);
+  fhandle handle = name_find_or_insert(new_path);
+  if (!name_remove(old_path)) {
+    return handle_error(sock, SNFS_EINTERNAL);
+  }
+  snfs_rep reply = make_reply(RENAME, .rename_rep = {.handle = handle});
+
+  // Send off the message
+  debug("Renamed '%s'. New handle %" PRIu64 "\n", old_path, handle);
+  if (send_reply(sock, &reply, snfs_rep_size(rename)) < 0) {
+    print_err("Failed to send reply to rename for %s.\n", old_path);
+  }
 }
 
 /**
