@@ -15,22 +15,56 @@
 #include "server.h"
 #include "test.h"
 
-// TODO(tugan): add tests
-
 static void server_cleanup() {
   stop_server(true);
   teardown_client();
 }
 
-static bool test_noop() {
-  // setup client sends two NOOPS
+static bool test_create() {
+  // Make sure we can create and remove a database.
   check(start_server(true));
-  // will call err_exit (failing the test) if server doesn't reply to NOOPs
-  setup_client();
+  check(setup_client());
 
-  // Okay, done
-  check(teardown_client());
+  struct fuse_file_info fi1;
+  fi1.fh = 1;
+
+  struct fuse_file_info fi2;
+  fi2.fh = 2;
+
+  // As always, we start with nonexisting files
+  char rand_string[SNFS_MAX_FILENAME_BUF];
+  for (int i = 0; i < 100; ++i) {
+    gen_random_filename(rand_string, SNFS_MAX_FILENAME_LENGTH - 64);
+    check_eq(snfs_open(rand_string, &fi1), -ENOENT);
+    check_eq(fi1.fh, 1);
+  }
+
+  // Now check that things that exist get opened correctly
+  fhandle handle;
+  for (int i = 0; i < 100; ++i) {
+    // Create the file
+    gen_random_filename(rand_string, SNFS_MAX_FILENAME_LENGTH - 64);
+    check(!snfs_create(rand_string, S_IRWXU, &fi1));
+
+    // Can open it
+    check(!snfs_open(rand_string, &fi1));
+    check(fi1.fh > 0);
+    check_neq(fi1.fh, fi2.fh);
+
+    // Handles can be looked up
+    check(lookup(rand_string, &handle));
+    check_eq(fi1.fh, handle);
+
+    // Recreate the same file returns same file handle
+    check(!snfs_create(rand_string, S_IRWXU, &fi2));
+    check(!snfs_open(rand_string, &fi2));
+    check(fi2.fh > 0);
+    check_eq(fi1.fh, fi2.fh);
+  }
+
+  // Clean up
   check(stop_server(true));
+  check(teardown_client());
   return true;
 }
 
@@ -57,5 +91,5 @@ BEGIN_TEST_SUITE(extra_credit_create_file_tests) {
   srand(current_ms());
 
   // Run the tests
-  clean_run_test(test_noop, server_cleanup);
+  clean_run_test(test_create, server_cleanup);
 }

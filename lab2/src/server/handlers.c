@@ -641,71 +641,183 @@ void handle_unimplemented(int sock, snfs_msg_type msg_type) {
 }
 
 /**
- * The CREATE handler.
+ * The FUSE CREATE handler.
  *
  * FIXME. ADD DOCUMENTATION
  */
 void handle_create(int sock, snfs_create_args *args) {
-  UNUSED(args);
+  char *file_path = (char *)args->filename;
+  int fd = creat(file_path, (mode_t)args->mode);
+  if (fd < 0) {
+    debug("Failed to create file: %s\n", file_path);
+    if (errno == ENOENT) {
+      return handle_error(sock, SNFS_ENOENT);
+    } else if (errno == EACCES) {
+      return handle_error(sock, SNFS_EACCES);
+    } else {
+      return handle_error(sock, SNFS_EINTERNAL);
+    }
+  }
 
-  debug("Handling create");
+  fhandle handle = name_find_or_insert(file_path);
+  snfs_rep reply = make_reply(CREATE, .create_rep = {.handle = handle});
 
-  // FIXME.
-  handle_unimplemented(sock, CREATE);
+  // Send off the message
+  debug("Created '%s', sending handle %" PRIu64 "\n", file_path, handle);
+  if (send_reply(sock, &reply, snfs_rep_size(create)) < 0) {
+    print_err("Failed to send reply to create for %s.\n", file_path);
+  }
 }
 
 /**
- * The UNLINK handler.
+ * The FUSE remove handler.
  *
  * FIXME. ADD DOCUMENTATION
  */
-void handle_unlink(int sock, snfs_unlink_args *args) {
-  UNUSED(args);
+void handle_remove(int sock, snfs_remove_args *args) {
+  debug("Handling remove");
 
-  debug("Handling unlink");
+  // Get the path from the fhandle
+  const char *path = get_file(args->fh);
+  if (!path) {
+    debug("Did not find path for remove: %" PRIu64 "\n", args->fh);
+    return handle_error(sock, SNFS_ENOENT);
+  }
 
-  // FIXME.
-  handle_unimplemented(sock, UNLINK);
+  // Ensure the path exists and the path supplied was valid
+  struct stat st;
+  if (stat(path, &st)) {
+    debug("Bad stat for dir path %s\n", path);
+    if (errno == ENOENT) {
+      handle_error(sock, SNFS_ENOENT);
+    } else {
+      handle_error(sock, SNFS_EINTERNAL);
+    }
+    return free((void *)path);
+  }
+
+  if (args->is_dir) {
+    // Make sure the handle points to a directory
+    if (!S_ISDIR(st.st_mode)) {
+      debug("Not a directory: %s\n", path);
+      handle_error(sock, SNFS_ENOTDIR);
+      return free((void *)path);
+    }
+
+    if (rmdir(path)) {
+      debug("Failed to rmdir: %s\n", path);
+      if (errno == ENOENT) {
+        handle_error(sock, SNFS_ENOENT);
+      } else if (errno == EACCES) {
+        handle_error(sock, SNFS_EACCES);
+      } else if (errno == ENOTDIR) {
+        handle_error(sock, SNFS_ENOTDIR);
+      } else {
+        handle_error(sock, SNFS_EINTERNAL);
+      }
+      return free((void *)path);
+    }
+  } else {
+    // Make sure the handle is not a directory
+    if (unlink(path)) {
+      debug("Failed to unlink file: %s\n", path);
+      if (errno == ENOENT) {
+        handle_error(sock, SNFS_ENOENT);
+      } else if (errno == EACCES) {
+        handle_error(sock, SNFS_EACCES);
+      } else if (errno == ENOTDIR) {
+        handle_error(sock, SNFS_ENOTDIR);
+      } else {
+        handle_error(sock, SNFS_EINTERNAL);
+      }
+      return free((void *)path);
+    }
+  }
+
+  if (!name_remove(path)) {
+    debug("Failed to remove file from DB: %s\n", path);
+    handle_error(sock, SNFS_EINTERNAL);
+    return free((void *)path);
+  }
+
+  snfs_rep reply = make_reply(REMOVE, /** No reply */);
+
+  // Send off the message
+  debug("Removed '%s' with handle %" PRIu64 "\n", path, args->fh);
+  if (send_reply(sock, &reply, snfs_rep_size(remove)) < 0) {
+    print_err("Failed to send reply to remove for %s.\n", path);
+  }
+
+  free((void *)path);
 }
 
 /**
- * The RENAME handler.
+ * The FUSE RENAME handler.
  *
  * FIXME. ADD DOCUMENTATION
  */
 void handle_rename(int sock, snfs_rename_args *args) {
-  UNUSED(args);
+  // Get the path from the fhandle
+  const char *old_path = get_file(args->fh);
+  if (!old_path) {
+    debug("Did not find path for rename: %" PRIu64 "\n", args->fh);
+    return handle_error(sock, SNFS_ENOENT);
+  }
 
-  debug("Handling rename");
+  char *new_path = (char *)args->filename;
+  if (rename(old_path, new_path)) {
+    debug("Failed to rename file: %s\n", old_path);
+    if (errno == ENOENT) {
+      handle_error(sock, SNFS_ENOENT);
+    } else if (errno == EACCES) {
+      handle_error(sock, SNFS_EACCES);
+    } else {
+      handle_error(sock, SNFS_EINTERNAL);
+    }
+    return free((void*) old_path);
+  }
 
-  // FIXME.
-  handle_unimplemented(sock, RENAME);
+  fhandle handle = name_find_or_insert(new_path);
+  if (!name_remove(old_path)) {
+    handle_error(sock, SNFS_EINTERNAL);
+    return free((void*) old_path);
+  }
+  snfs_rep reply = make_reply(RENAME, .rename_rep = {.handle = handle});
+
+  // Send off the message
+  debug("Renamed '%s'. New handle %" PRIu64 "\n", old_path, handle);
+  if (send_reply(sock, &reply, snfs_rep_size(rename)) < 0) {
+    print_err("Failed to send reply to rename for %s.\n", old_path);
+  }
+
+  free((void*) old_path);
 }
 
 /**
- * The MKDIR handler.
+ * The FUSE MKDIR handler.
  *
  * FIXME. ADD DOCUMENTATION
  */
 void handle_mkdir(int sock, snfs_mkdir_args *args) {
-  UNUSED(args);
+  char *dir_path = (char *)args->dirname;
+  int fd = mkdir(dir_path, (mode_t)args->mode);
+  if (fd < 0) {
+    debug("Failed to mkdir file: %s\n", dir_path);
+    if (errno == ENOENT) {
+      return handle_error(sock, SNFS_ENOENT);
+    } else if (errno == EACCES) {
+      return handle_error(sock, SNFS_EACCES);
+    } else {
+      return handle_error(sock, SNFS_EINTERNAL);
+    }
+  }
 
-  debug("Handlingmkdir ");
+  fhandle handle = name_find_or_insert(dir_path);
+  snfs_rep reply = make_reply(MKDIR, .mkdir_rep = {.handle = handle});
 
-  // FIXME.
-  handle_unimplemented(sock, MKDIR);
-}
-
-/**
- * The RMDIR handler.
- *
- * FIXME. ADD DOCUMENTATION
- */
-void handle_rmdir(int sock, snfs_rmdir_args *args) {
-  UNUSED(args);
-
-  debug("Handlingrmdir ");
-
-  // FIXME.
-  handle_unimplemented(sock, RMDIR);
+  // Send off the message
+  debug("Created '%s', sending handle %" PRIu64 "\n", dir_path, handle);
+  if (send_reply(sock, &reply, snfs_rep_size(mkdir)) < 0) {
+    print_err("Failed to send reply to mkdir for %s.\n", dir_path);
+  }
 }

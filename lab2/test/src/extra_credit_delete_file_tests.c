@@ -15,22 +15,50 @@
 #include "server.h"
 #include "test.h"
 
-// TODO(tugan): add tests
-
 static void server_cleanup() {
   stop_server(true);
   teardown_client();
 }
 
-static bool test_noop() {
-  // setup client sends two NOOPS
+static bool test_delete() {
+  // Make sure we can create and remove a database.
   check(start_server(true));
-  // will call err_exit (failing the test) if server doesn't reply to NOOPs
-  setup_client();
+  check(setup_client());
 
-  // Okay, done
-  check(teardown_client());
+  struct fuse_file_info fi;
+  fi.fh = 1;
+
+  // As always, we start with nonexisting files
+  char rand_string[SNFS_MAX_FILENAME_BUF];
+  for (int i = 0; i < 100; ++i) {
+    gen_random_filename(rand_string, SNFS_MAX_FILENAME_LENGTH - 64);
+    check_eq(snfs_open(rand_string, &fi), -ENOENT);
+  }
+
+  // Create some files, then delete them
+  fhandle handle;
+  for (int i = 0; i < 100; ++i) {
+    // Create a file
+    gen_random_filename(rand_string, SNFS_MAX_FILENAME_LENGTH - 64);
+    create_file_at_path(rand_string);
+
+    // Open Success
+    check(!snfs_open(rand_string, &fi));
+    check(fi.fh > 0);
+
+    // Delete the file
+    check(!snfs_unlink(rand_string));
+
+    // Handles cannot be looked up
+    check(!lookup(rand_string, &handle));
+
+    // Open failed
+    check_eq(snfs_open(rand_string, &fi), -ENOENT);
+  }
+
+  // Clean up
   check(stop_server(true));
+  check(teardown_client());
   return true;
 }
 
@@ -57,5 +85,5 @@ BEGIN_TEST_SUITE(extra_credit_delete_file_tests) {
   srand(current_ms());
 
   // Run the tests
-  clean_run_test(test_noop, server_cleanup);
+  clean_run_test(test_delete, server_cleanup);
 }

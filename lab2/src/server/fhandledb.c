@@ -120,6 +120,49 @@ static char *find(const void *key, size_t keylen, size_t *vallen) {
 }
 
 /**
+ * Attempts to remove the value for `key` from the database.
+ *
+ * @param filename the name of the file
+ *
+ * @return true on success, and false otherwise.
+ */
+bool name_remove(const char *filename) {
+  // Make sure we have a database.
+  init_db_if_needed();
+
+  size_t rlen;
+  char *handle = find(filename, strlen(filename) + 1, &rlen);
+  if (!handle) {
+    return false;
+  }
+
+  // The key to delete
+  DBT db_key = (DBT){.data = (void *)filename, .size = strlen(filename) + 1};
+  DBT db_key2 = (DBT){.data = (void *)handle, .size = sizeof(handle)};
+
+  // Some nice debug info.
+  if_debug {
+    printf("Deleting value for key: ");
+    printbuf((void *)filename, strlen(filename) + 1);
+    printbuf((void *)handle, sizeof(handle));
+  }
+
+  // Do the del.
+  int err = DBP->del(DBP, NULL, &db_key, 0);
+  int err2 = DBP->del(DBP, NULL, &db_key2, 0);
+  if (err || err2) {
+    if (err != DB_NOTFOUND || err2 != DB_NOTFOUND) {
+      DBP->err(DBP, err, "Database del() failed!");
+      err_exit("Database del failed unexpectedly!\n");
+    }
+    debug("Key was not found in the database.\n");
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * Inserts the value `val` with size `vallen` for `key` of size `keylen` in the
  * database.
  *

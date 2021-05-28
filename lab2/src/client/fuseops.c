@@ -502,67 +502,197 @@ int snfs_utimens(const char *path, const struct timespec tv[2]) {
 }
 
 /**
- * Create and open a file
+ * The FUSE create callback
  *
- * If the file does not exist, first create it with the specified
- * mode, and then open it.
- *
- * If this method is not implemented or under Linux kernel
- * versions earlier than 2.6.15, the mknod() and open() methods
- * will be called instead.
- *
- * Introduced in version 2.5
+ * Create and open a file. If the file does not exist, first create it with the
+ * specified mode, and then open it.
  */
 int snfs_create(const char *path, mode_t mode, ffi *fi) {
+  verbose(STATE->options.verbose, "Creating file %s.\n", path);
+
+  if (!strcmp(path, "/")) {
+    print_err("Cannot create a file that is the mounted root handle");
+    return -ENOENT;
+  }
+
+  // Prepare create request and reply object
+  snfs_req request = make_request(CREATE, /* fill in later */);
+  snfs_create_args *args = &request.content.create_args;
+  args->mode = (mode_t)mode;
+  memset(args->filename, '\0', sizeof(uint8_t) * SNFS_MAX_FILENAME_BUF);
+  memcpy(args->filename, (uint8_t *)path,
+         sizeof(uint8_t) * SNFS_MAX_FILENAME_LENGTH);
+
+  snfs_rep *reply;
+  reply = send_request(&request, snfs_req_size(create));
+  if (!reply) {
+    return -ENOENT;
+  }
+
+  fi->fh = reply->content.create_rep.handle;
+
+  nn_freemsg(reply);
+  return 0;
+}
+
+/**
+ * The FUSE unlink callback
+ *
+ * Remove a file
+ */
+int snfs_unlink(const char *path) {
+  assert(path);
+
+  fhandle handle;
+  if (!lookup(path, &handle)) {
+    return -ENOENT;
+  }
+  snfs_req request =
+      make_request(REMOVE, .remove_args = {.fh = handle, .is_dir = 0});
+  snfs_rep *reply = send_request(&request, snfs_req_size(remove));
+  if (!reply) {
+    return -ENOENT;
+  }
+
+  nn_freemsg(reply);
+  return 0;
+}
+
+/**
+ * The FUSE rename callback
+ *
+ * Rename a file
+ */
+int snfs_rename(const char *oldpath, const char *newpath) {
+  verbose(STATE->options.verbose, "Renaming file from  %s to %s.\n", oldpath,
+          newpath);
+  fhandle handle;
+  if (!lookup(oldpath, &handle)) {
+    return -ENOENT;
+  }
+
+  // Prepare rename request and reply object
+  snfs_req request = make_request(RENAME, /* fill in later */);
+  snfs_rename_args *args = &request.content.rename_args;
+  args->fh = handle;
+
+  memset(args->filename, '\0', sizeof(uint8_t) * SNFS_MAX_FILENAME_BUF);
+  memcpy(args->filename, (uint8_t *)newpath,
+         sizeof(uint8_t) * SNFS_MAX_FILENAME_LENGTH);
+
+  snfs_rep *reply;
+  reply = send_request(&request, snfs_req_size(rename));
+  if (!reply) {
+    return -ENOENT;
+  }
+
+  nn_freemsg(reply);
+  return 0;
+}
+
+/**
+ * The FUSE release callback
+ *
+ * Release is called when there are no more references to an open
+ * file: all file descriptors are closed and all memory mappings
+ * are unmapped.
+ *
+ * For every open() call there will be exactly one release() call
+ * with the same flags and file descriptor.	 It is possible to
+ * have a file opened more than once, in which case only the last
+ * release will mean, that no more reads/writes will happen on the
+ * file.  The return value of release is ignored.
+ */
+int snfs_release(const char *path, ffi *fi) {
   UNUSED(path);
-  UNUSED(mode);
   UNUSED(fi);
 
-  // FIXME
-
-  return -ENOENT;
+  return 0;
 }
 
-/** Remove a file */
-int snfs_unlink(const char *path) {
-  UNUSED(path);
+/**
+ * The FUSE opendir callback
+ *
+ * Unless the 'default_permissions' mount option is given,
+ * this method should check if opendir is permitted for this
+ * directory. Optionally opendir may also return an arbitrary
+ * filehandle in the fuse_file_info structure, which will be
+ * passed to readdir, releasedir and fsyncdir.
+ */
+int snfs_opendir(const char *path, ffi *fi) {
+  fhandle handle;
+  if (!lookup(path, &handle)) {
+    return -ENOENT;
+  }
+  fi->fh = handle;
 
-  // FIXME
-
-  return -ENOENT;
+  return 0;
 }
 
-
-/** Rename a file */
-int snfs_rename(const char *oldpath, const char *newpath) {
-  UNUSED(oldpath);
-  UNUSED(newpath);
-
-  // FIXME
-
-  return -ENOENT;
-}
-
-/** Create a directory
+/**
+ * The FUSE mkdir callback
  *
  * Note that the mode argument may not have the type specification
  * bits set, i.e. S_ISDIR(mode) can be false.  To obtain the
  * correct directory type bits use  mode|S_IFDIR
- * */
+ */
 int snfs_mkdir(const char *path, mode_t mode) {
-  UNUSED(path);
-  UNUSED(mode);
+  verbose(STATE->options.verbose, "Creating directory %s.\n", path);
 
-  // FIXME
+  if (!strcmp(path, "/")) {
+    print_err("Cannot mkdir a directory that is the mounted root handle");
+    return -ENOENT;
+  }
 
-  return -ENOENT;
+  // Prepare mkdir request and reply object
+  snfs_req request = make_request(MKDIR, /* fill in later */);
+  snfs_mkdir_args *args = &request.content.mkdir_args;
+  args->mode = (mode_t)mode | S_IFDIR;
+  memset(args->dirname, '\0', sizeof(uint8_t) * SNFS_MAX_FILENAME_BUF);
+  memcpy(args->dirname, (uint8_t *)path,
+         sizeof(uint8_t) * SNFS_MAX_FILENAME_LENGTH);
+
+  snfs_rep *reply;
+  reply = send_request(&request, snfs_req_size(mkdir));
+  if (!reply) {
+    return -ENOENT;
+  }
+
+  nn_freemsg(reply);
+  return 0;
 }
 
-/** Remove a directory */
-int snfs_rmdir(const char *path) {
+/**
+ * The FUSE releasedir callback
+ *
+ * Release a directory
+ */
+int snfs_releasedir(const char *path, ffi *fi) {
   UNUSED(path);
+  UNUSED(fi);
 
-  // FIXME
+  return 0;
+}
 
-  return -ENOENT;
+/**
+ * The FUSE rmdir callback
+ *
+ * Remove a directory
+ */
+int snfs_rmdir(const char *path) {
+  assert(path);
+
+  fhandle handle;
+  if (!lookup(path, &handle)) {
+    return -ENOENT;
+  }
+  snfs_req request =
+      make_request(REMOVE, .remove_args = {.fh = handle, .is_dir = 1});
+  snfs_rep *reply = send_request(&request, snfs_req_size(remove));
+  if (!reply) {
+    return -ENOENT;
+  }
+
+  nn_freemsg(reply);
+  return 0;
 }

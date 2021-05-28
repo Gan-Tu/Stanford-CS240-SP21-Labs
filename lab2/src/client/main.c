@@ -167,7 +167,9 @@ static struct fuse_operations snfs_client_oper = {
     .create = snfs_create,
     .unlink = snfs_unlink,
     .rename = snfs_rename,
+    .opendir = snfs_opendir,
     .mkdir = snfs_mkdir,
+    .releasedir = snfs_releasedir,
     .rmdir = snfs_rmdir,
 };
 

@@ -1,0 +1,109 @@
+# Extra Credit - Add support for file creation, deletion, and renaming
+
+## Design
+
+To support creating file, deleting files, and renaming files, we implement the
+FUSE callback handlers for `create`, `unlink`, and `rename` correspondingly.
+
+I also additionally implemented extra operations outside of extra credit
+requirement including `mkdir`, `rmdir`, and dir open and file/dir release 
+handlers.
+
+## Implementation
+
+Inspired by the NFSv3 protocol and Fuse's handlers, I modified code on both
+client side and server side.
+
+For file creation, upon `snfs_create` fuse callback, the client will first 
+ensure it is not the root, and errors otherwise. Then, it sends a newly created
+`CREATE` snfs message type, and with the filename and mode along in the request 
+arguments. The server will handle the request via a new `handle_create` handler,
+and call the linux `creat` for file creation. If successful, the server 
+generates a new file handle for the file, and return back to the client with a 
+newly created `snfs_create_rep` reply message.
+
+For file deletion, upon `snfs_unlink` fuse callback, the client will first 
+ensure the file already exists, and errors otherwise. Then, it sends a newly 
+created `REMOVE` snfs message type, and with the file handle in the request 
+arguments. Specifically, The server will handle the request via a new `handle_remove` 
+handler, and ensures we can successfully `stat` the file. Then, it calls
+the linux `unlink` for file deletion. If successful, the server 
+will go ahead and remove the file handle entries from the DB for both file handle
+to filename mapping, and the filename to file handle mapping; returning any 
+internal error if encountered. It will finish off by sending back an empty, 
+newly created `snfs_remove_rep` reply message; otherwise, an error. 
+
+Note that since I also implemented a `rmdir`, I followed NFSv3
+protocol and just indicated in the request message if a handle is a directory,
+The server will handle remove file and remove directory differently, and use 
+`rmdir` instead.
+
+For file rename, upon `snfs_rename` fuse callback, the client will first 
+ensure the file already exists, and errors otherwise. Then, it sends a newly 
+created `REMOVE` snfs message type, and with the file handle and the new file 
+name in the request arguments. Specifically, The server will handle the request 
+via a new `handle_rename` handler, and ensures we can successfully `stat` the 
+file. Then, it calls the linux `rename` for file deletion. If successful, the 
+server will go ahead and remove the old file handle entries from the DB for both 
+the old file handle to old filename mapping; vice versa; Then, it creates a new 
+file handle and name mapping for the new name, returning any internal error if 
+encountered. It will finish off by sending back the new file handle in a 
+newly created `snfs_rename_rep` reply message; otherwise, an error. 
+
+
+### Access Control
+
+I noticed that Fuse runs in single user mode, so by default, it won't allow 
+others to access the file system than the user who runs the Fuse client. This 
+works fine for the tests, because they directly use root user to run both server 
+and client and call file system directly. However, for actual use case to work,
+we can either:
+
+1. add `use_allow_other` in the fuse config `/etc/fuse.conf`, and pass in an 
+extra `-o allow_other` flag in the client's `main.cc` when instantiating fuse 
+with `fuse_main`. 
+
+2. or, simply run both server and client in the same user mode, and use the same 
+user to interact with them. 
+
+For simplicity, I chose the latter one because I am not sure how auto grader 
+works, if it involves changing `/etc/fuse.conf` in auto grader environment. The 
+fuse client can fail if that is not set to `use_allow_other` but we pass the 
+`-o allow_other` flag.
+
+
+## Unit Tests
+
+For now, I created unit tests for each of `create`, `unlink`, and `rename`.
+
+You can run the tests using make command `make extra_credit_test`, which will
+compile and run the 
+
+- `extra_credit_create_file_tests.cc`
+- `extra_credit_delete_file_tests.cc`
+- `extra_credit_rename_file_tests.cc`
+
+
+For create, I ran 100 iterations of randomly creating file names and ensuring
+
+- they cannot be opened before they are created
+- the create command succeeds
+- they can be be opened and looked up after they are created
+- recreate existing files should return the same file handle
+
+For delete, I ran 100 iterations of randomly creating file names and ensuring
+
+- create the random files 
+- the files can be opened 
+- the delete command succeeds 
+- they can no longer be opened and looked up for after they are deleted
+
+For rename, I ran 100 iterations of randomly creating file names and ensuring
+
+- create two random, different file names: A and B
+- they cannot be opened or looked up before they exist 
+- create file A and write something
+- A can be opened and looked up, but not B
+- rename A to B succeeds
+- B can be opened and looked up, but no longer the A 
+- B's content is the same as what was written to A

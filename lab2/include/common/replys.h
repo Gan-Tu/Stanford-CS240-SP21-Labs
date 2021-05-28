@@ -41,23 +41,23 @@ typedef struct snfs_setattr_rep_struct {
 
 // Extra Credit
 typedef struct snfs_create_rep_struct {
-  /* FIXME. */
+  fhandle handle;  // Handle for the file that was created.
 } snfs_create_rep;
 
-typedef struct snfs_unlink_rep_struct {
-  /* FIXME. */
-} snfs_unlink_rep;
+typedef struct snfs_remove_rep_struct {
+  /* No reply. */
+} snfs_remove_rep;
 
 typedef struct snfs_rename_rep_struct {
-  /* FIXME. */
+  fhandle handle;  // Handle for the new file that was created.
 } snfs_rename_rep;
 
 typedef struct snfs_mkdir_rep_struct {
-  /* FIXME. */
+  fhandle handle;    // Handle for the directory that was created.
 } snfs_mkdir_rep;
 
 typedef struct snfs_rmdir_rep_struct {
-  /* FIXME. */
+  /* No reply. */
 } snfs_rmdir_rep;
 
 typedef struct packed snfs_rep_struct {
@@ -73,7 +73,7 @@ typedef struct packed snfs_rep_struct {
     snfs_setattr_rep setattr_rep;
     // Extra Credit
     snfs_create_rep create_rep;
-    snfs_unlink_rep unlink_rep;
+    snfs_remove_rep remove_rep;
     snfs_rename_rep rename_rep;
     snfs_mkdir_rep mkdir_rep;
     snfs_rmdir_rep rmdir_rep;
